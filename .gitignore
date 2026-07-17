@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+build/
+out/
+classes/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+.eclipse/
+
+# Fabric / Loom
+run/
+remappedSrc/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local tooling output
+*.spv
+.validation/

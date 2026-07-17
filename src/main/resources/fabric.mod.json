@@ -1,0 +1,33 @@
+{
+	"schemaVersion": 1,
+	"id": "vulkiris",
+	"version": "${version}",
+	"name": "Vulkiris",
+	"description": "A lightweight shader mod for Minecraft's Vulkan (and OpenGL) rendering backend. Filmic tonemapping, soft bloom, aerial-perspective fog, and sun scattering — all in a couple of GPU passes.",
+	"authors": [
+		"DarkerApple"
+	],
+	"contact": {
+		"sources": "https://github.com/DarkerApple/vulkiris"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.vulkiris.VulkirisClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "vulkiris.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-lifecycle-events-v1": "*",
+		"fabric-key-mapping-api-v1": "*"
+	}
+}

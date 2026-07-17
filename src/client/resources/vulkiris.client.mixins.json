@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "dev.vulkiris.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"LevelRendererMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
