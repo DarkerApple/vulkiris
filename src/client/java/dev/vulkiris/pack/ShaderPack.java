@@ -37,6 +37,10 @@ public final class ShaderPack implements Closeable {
 	public record Pass(String fragment, float scale) {
 	}
 
+	/** A user-tunable pack setting, surfaced as a slider in the pack screen (max 8). */
+	public record Setting(String id, String name, float min, float max, float def) {
+	}
+
 	private final String id;
 	private final Path root;
 	private final @org.jspecify.annotations.Nullable FileSystem zipFs;
@@ -44,8 +48,11 @@ public final class ShaderPack implements Closeable {
 	private final String author;
 	private final boolean waterDepth;
 	private final List<Pass> passes;
+	private final List<Setting> settings;
+	private final java.util.LinkedHashMap<String, java.util.Map<String, Float>> presets;
 
-	private ShaderPack(String id, Path root, FileSystem zipFs, String name, String author, boolean waterDepth, List<Pass> passes) {
+	private ShaderPack(String id, Path root, FileSystem zipFs, String name, String author, boolean waterDepth, List<Pass> passes,
+			List<Setting> settings, java.util.LinkedHashMap<String, java.util.Map<String, Float>> presets) {
 		this.id = id;
 		this.root = root;
 		this.zipFs = zipFs;
@@ -53,6 +60,8 @@ public final class ShaderPack implements Closeable {
 		this.author = author;
 		this.waterDepth = waterDepth;
 		this.passes = passes;
+		this.settings = settings;
+		this.presets = presets;
 	}
 
 	/** Loads a pack from a folder or a .zip file. The caller owns the returned pack. */
@@ -85,7 +94,39 @@ public final class ShaderPack implements Closeable {
 			if (passes.size() > MAX_PASSES) {
 				throw new IOException("Too many passes (max " + MAX_PASSES + ")");
 			}
-			return new ShaderPack(id, root, zipFs, name, author, waterDepth, List.copyOf(passes));
+
+			List<Setting> settings = new ArrayList<>();
+			if (json.has("settings")) {
+				for (var element : json.getAsJsonArray("settings")) {
+					JsonObject setting = element.getAsJsonObject();
+					float min = setting.has("min") ? setting.get("min").getAsFloat() : 0.0f;
+					float max = setting.has("max") ? setting.get("max").getAsFloat() : 1.0f;
+					float def = setting.has("default") ? setting.get("default").getAsFloat() : min;
+					settings.add(new Setting(
+							setting.get("id").getAsString(),
+							setting.has("name") ? setting.get("name").getAsString() : setting.get("id").getAsString(),
+							min, Math.max(min + 1.0e-4f, max), def));
+					if (settings.size() >= 8) {
+						break;
+					}
+				}
+			}
+			java.util.LinkedHashMap<String, java.util.Map<String, Float>> presets = new java.util.LinkedHashMap<>();
+			if (json.has("presets")) {
+				JsonObject presetsJson = json.getAsJsonObject("presets");
+				for (String presetName : presetsJson.keySet()) {
+					java.util.Map<String, Float> values = new java.util.LinkedHashMap<>();
+					JsonObject valuesJson = presetsJson.getAsJsonObject(presetName);
+					for (String key : valuesJson.keySet()) {
+						values.put(key, valuesJson.get(key).getAsFloat());
+					}
+					presets.put(presetName, values);
+					if (presets.size() >= 6) {
+						break;
+					}
+				}
+			}
+			return new ShaderPack(id, root, zipFs, name, author, waterDepth, List.copyOf(passes), List.copyOf(settings), presets);
 		} catch (IOException | RuntimeException e) {
 			if (zipFs != null) {
 				zipFs.close();
@@ -113,6 +154,16 @@ public final class ShaderPack implements Closeable {
 
 	public List<Pass> passes() {
 		return this.passes;
+	}
+
+	/** User-tunable settings the pack declared (possibly empty). */
+	public List<Setting> settings() {
+		return this.settings;
+	}
+
+	/** Named value sets declared by the pack, applied through the pack screen. */
+	public java.util.LinkedHashMap<String, java.util.Map<String, Float>> presets() {
+		return this.presets;
 	}
 
 	/** Reads a pack shader file with {@code #moj_import} directives expanded. */

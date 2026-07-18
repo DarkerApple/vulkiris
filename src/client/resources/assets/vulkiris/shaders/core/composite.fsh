@@ -62,6 +62,8 @@ void main() {
     float underwater = Screen.w;
     float rain = CameraPos.w;
     float time = Screen.z;
+    // 0 by day, 1 under moonlight: lerps warm daylight colors toward cool silver.
+    float moonCool = Celestial.x;
 
     // --- Reconstruct view-space position from depth (26.2 uses a reversed depth buffer). ---
     float depth = texture(SceneDepthSampler, texCoord).r;
@@ -98,15 +100,20 @@ void main() {
     if (Style.w > 0.001 && !isSky) {
         float lit = clamp(dot(faceNormal, SunDirView.xyz), 0.0, 1.0) * SunDirView.w;
         float shade = (1.0 - clamp(dot(faceNormal, SunDirView.xyz), 0.0, 1.0)) * SunDirView.w;
-        float s = Style.w;
-        color *= vec3(1.0 + 0.26 * lit * s, 1.0 + 0.15 * lit * s, 1.0 - 0.05 * lit * s);
-        color *= vec3(1.0 - 0.09 * shade * s, 1.0 - 0.035 * shade * s, 1.0 + 0.05 * shade * s);
+        float s = Style.w * (1.0 - moonCool * 0.4);
+        vec3 litWarm = vec3(1.0 + 0.26 * lit * s, 1.0 + 0.15 * lit * s, 1.0 - 0.05 * lit * s);
+        vec3 litCool = vec3(1.0 + 0.06 * lit * s, 1.0 + 0.10 * lit * s, 1.0 + 0.22 * lit * s);
+        color *= mix(litWarm, litCool, moonCool);
+        vec3 shadeWarm = vec3(1.0 - 0.09 * shade * s, 1.0 - 0.035 * shade * s, 1.0 + 0.05 * shade * s);
+        vec3 shadeCool = vec3(1.0 - 0.11 * shade * s, 1.0 - 0.08 * shade * s, 1.0 - 0.02 * shade * s);
+        color *= mix(shadeWarm, shadeCool, moonCool);
     }
 
     // --- Depth-normal sun specular on all surfaces ("PBR-ish" gloss). ---
     if (Extra2.x > 0.001 && !isSky) {
         float spec = pow(max(dot(reflect(viewDir, faceNormal), SunDirView.xyz), 0.0), 24.0) * SunDirView.w;
-        color += vec3(1.0, 0.93, 0.8) * spec * Extra2.x * 0.35 * (0.35 + 0.65 * baseLuma);
+        vec3 specColor = mix(vec3(1.0, 0.93, 0.8), vec3(0.75, 0.85, 1.1), moonCool);
+        color += specColor * spec * Extra2.x * 0.35 * (0.35 + 0.65 * baseLuma);
     }
 
     // --- Block-outline edge factor, shared by rim lighting and the toon outline. ---
@@ -147,7 +154,8 @@ void main() {
 
     // --- Shine-style rim lighting: crisp bright outlines around blocks. ---
     if (Style.y > 0.001 && silhouette > 0.001) {
-        vec3 rimColor = mix(Fog.rgb * 1.3, vec3(1.0, 0.95, 0.8), SunDirView.w * 0.6);
+        vec3 rimHighlight = mix(vec3(1.0, 0.95, 0.8), vec3(0.75, 0.85, 1.15), moonCool);
+        vec3 rimColor = mix(Fog.rgb * 1.3, rimHighlight, SunDirView.w * 0.6);
         color += rimColor * silhouette * Style.y * (0.35 + 0.25 * baseLuma);
     }
 
@@ -251,7 +259,8 @@ void main() {
 
                 // Sun glint sparkle from the animated normal.
                 float glint = pow(max(dot(reflected, SunDirView.xyz), 0.0), 220.0) * SunDirView.w;
-                color += vec3(1.0, 0.9, 0.7) * glint * 1.6 * upFacing;
+                vec3 glintColor = mix(vec3(1.0, 0.9, 0.7), vec3(0.8, 0.9, 1.15), moonCool);
+                color += glintColor * glint * 1.6 * upFacing;
             }
         }
     }
@@ -272,7 +281,7 @@ void main() {
         fogAmount = clamp(fogAmount, 0.0, 0.8);
 
         float sunAmount = pow(max(dot(viewDir, SunDirView.xyz), 0.0), 8.0) * SunDirView.w * BloomParams.z;
-        vec3 sunTint = Fog.rgb * vec3(1.30, 1.07, 0.82);
+        vec3 sunTint = Fog.rgb * mix(vec3(1.30, 1.07, 0.82), vec3(0.85, 0.95, 1.25), moonCool);
         vec3 fogTint = mix(Fog.rgb, sunTint, clamp(sunAmount, 0.0, 1.0));
         vec3 underwaterTint = Fog.rgb * vec3(0.75, 0.95, 1.1);
         fogTint = mix(fogTint, underwaterTint, underwater);
@@ -304,7 +313,7 @@ void main() {
         float volFog = 1.0 - exp(-accum * stepLen * 0.010 * Fog.w * (1.0 + rain));
         volFog = clamp(volFog, 0.0, 0.55);
         float sunPhase = pow(max(dot(viewDir, SunDirView.xyz), 0.0), 4.0) * SunDirView.w;
-        vec3 volColor = mix(Fog.rgb, Fog.rgb * vec3(1.35, 1.08, 0.8), sunPhase);
+        vec3 volColor = mix(Fog.rgb, Fog.rgb * mix(vec3(1.35, 1.08, 0.8), vec3(0.85, 0.95, 1.3), moonCool), sunPhase);
         color = mix(color, volColor, volFog * 0.8);
     }
 
@@ -336,7 +345,7 @@ void main() {
         }
         illumination /= float(rayTaps) * 0.5;
         float toSun = max(dot(viewDir, SunDirView.xyz), 0.0);
-        vec3 shaftColor = Fog.rgb * vec3(1.35, 1.05, 0.75);
+        vec3 shaftColor = Fog.rgb * mix(vec3(1.35, 1.05, 0.75), vec3(0.85, 0.95, 1.3), moonCool);
         color += shaftColor * clamp(illumination, 0.0, 1.0) * pow(toSun, 3.0) * Extra.w * SunDirView.w * 0.5;
     }
 
@@ -345,8 +354,9 @@ void main() {
         float sunDot = max(dot(viewDir, SunDirView.xyz), 0.0);
         float lowSun = 1.0 - clamp(SunDirWorld.y * 2.0, 0.0, 1.0);
         vec3 haloColor = mix(vec3(1.0, 0.95, 0.85), vec3(1.0, 0.62, 0.30), lowSun);
+        haloColor = mix(haloColor, vec3(0.80, 0.88, 1.1), moonCool);
         float halo = pow(sunDot, 900.0) * 1.1 + pow(sunDot, 90.0) * 0.35 + pow(sunDot, 12.0) * 0.10;
-        color += haloColor * halo * SunDirView.w * (0.4 + 0.6 * Style.w);
+        color += haloColor * halo * SunDirView.w * (0.4 + 0.6 * Style.w) * (1.0 - moonCool * 0.45);
     }
 
     // --- Sky, sunset, and cloud grading (clouds write depth, so far pixels catch it too). ---

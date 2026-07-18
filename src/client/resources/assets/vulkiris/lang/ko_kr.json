@@ -88,5 +88,7 @@
 	"vulkiris.option.vm_offset_y": "손 위치 Y",
 	"vulkiris.option.vm_rotation": "손 회전",
 	"vulkiris.option.vm_swing": "공격 모션 강조",
-	"vulkiris.button.vm_reset": "뷰모델 초기화"
+	"vulkiris.button.vm_reset": "뷰모델 초기화",
+	"vulkiris.button.save_preset": "프리셋으로 저장",
+	"vulkiris.msg.preset_saved": "프리셋 저장됨: %s"
 }

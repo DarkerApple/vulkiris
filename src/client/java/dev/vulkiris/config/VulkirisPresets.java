@@ -169,6 +169,39 @@ public final class VulkirisPresets {
 		return ids;
 	}
 
+	public static List<String> builtInIds() {
+		return new ArrayList<>(BUILT_INS.keySet());
+	}
+
+	public static List<String> userIds() {
+		return new ArrayList<>(USER.keySet());
+	}
+
+	public static boolean isImported(String id) {
+		return id.startsWith("imported");
+	}
+
+	/** Saves the current settings as a new user preset file and applies it. Returns its id. */
+	public static String saveCurrentAs() {
+		try {
+			Path dir = VulkirisConfig.presetsDir();
+			Files.createDirectories(dir);
+			String id = "my-preset";
+			for (int i = 1; Files.exists(dir.resolve(id + ".json")); i++) {
+				id = "my-preset-" + i;
+			}
+			Files.writeString(dir.resolve(id + ".json"), VulkirisConfig.GSON.toJson(VulkirisConfig.get()));
+			reloadUserPresets();
+			VulkirisConfig config = VulkirisConfig.get();
+			config.preset = id;
+			config.save();
+			return id;
+		} catch (Exception e) {
+			VulkirisClient.LOGGER.warn("Could not save preset", e);
+			return null;
+		}
+	}
+
 	public static Component displayName(String id) {
 		if (BUILT_INS.containsKey(id)) {
 			return Component.translatable("vulkiris.preset." + id);

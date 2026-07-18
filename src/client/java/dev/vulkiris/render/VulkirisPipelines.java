@@ -16,6 +16,7 @@ import net.minecraft.resources.Identifier;
  */
 public final class VulkirisPipelines {
 	public static RenderPipeline composite;
+	public static RenderPipeline compositeLite;
 	public static RenderPipeline bloomPrefilter;
 	public static RenderPipeline bloomBlurH;
 	public static RenderPipeline bloomBlurV;
@@ -37,6 +38,16 @@ public final class VulkirisPipelines {
 						.withSampler("SceneDepthSampler")
 						.withSampler("WaterDepthSampler")
 						.withSampler("BloomSampler")
+						.withUniform("VulkirisParams", UniformType.UNIFORM_BUFFER)
+						.build())
+				.build();
+		compositeLite = RenderPipeline.builder(RenderPipelines.POST_PROCESSING_SNIPPET)
+				.withLocation(id("pipeline/composite_lite"))
+				.withVertexShader(id("core/fullscreen"))
+				.withFragmentShader(id("core/composite_lite"))
+				.withBindGroupLayout(BindGroupLayout.builder()
+						.withSampler("SceneColorSampler")
+						.withSampler("SceneDepthSampler")
 						.withUniform("VulkirisParams", UniformType.UNIFORM_BUFFER)
 						.build())
 				.build();
@@ -65,6 +76,7 @@ public final class VulkirisPipelines {
 
 	public static void close() {
 		composite = null;
+		compositeLite = null;
 		bloomPrefilter = null;
 		bloomBlurH = null;
 		bloomBlurV = null;

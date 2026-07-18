@@ -19,4 +19,8 @@ layout(std140) uniform VulkirisParams {
     vec4 SunScreen;     // xy: sun position in UV space, z: 1 when usable, w: easter-egg strength
     vec4 Quality;       // x: ao taps (8/16/24), y: god-ray taps (14/28/48), z: volumetric fog steps (0/12/20), w: film grain
     vec4 Style;         // x: selective bloom on, y: rim light strength, z: toon shading on, w: sunlight strength
+    vec4 Celestial;     // x: 1 when the moon is the active light, y: moon phase brightness, z: moon visibility, w: unused
 };
+
+// SunDirView/SunScreen hold the ACTIVE celestial body (sun by day, moon at night).
+// Warm daylight colors should lerp toward cool silver with Celestial.x.

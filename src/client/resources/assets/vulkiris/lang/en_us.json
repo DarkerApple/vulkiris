@@ -88,5 +88,7 @@
 	"vulkiris.option.vm_offset_y": "Hand Offset Y",
 	"vulkiris.option.vm_rotation": "Hand Rotation",
 	"vulkiris.option.vm_swing": "Attack Punch",
-	"vulkiris.button.vm_reset": "Reset Viewmodel"
+	"vulkiris.button.vm_reset": "Reset Viewmodel",
+	"vulkiris.button.save_preset": "Save as Preset",
+	"vulkiris.msg.preset_saved": "Preset saved: %s"
 }

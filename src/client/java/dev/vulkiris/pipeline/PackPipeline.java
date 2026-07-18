@@ -67,6 +67,10 @@ public final class PackPipeline implements VulkirisPipeline {
 	private int consecutiveFailures;
 	private boolean failed;
 	private boolean waterDepthCaptured;
+	private com.mojang.blaze3d.buffers.GpuBuffer settingsBuffer;
+	private GpuBufferSlice settingsSlice;
+	private final java.nio.ByteBuffer settingsData =
+			java.nio.ByteBuffer.allocateDirect(32).order(java.nio.ByteOrder.nativeOrder());
 
 	public PackPipeline(String packId) {
 		this.packId = packId;
@@ -138,6 +142,7 @@ public final class PackPipeline implements VulkirisPipeline {
 		CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
 		try {
 			GpuBufferSlice params = VulkirisUniforms.upload(encoder);
+			GpuBufferSlice packSettings = this.uploadSettings(encoder);
 			encoder.copyTextureToTexture(
 					mainTarget.getColorTexture(), this.sceneCopy.getColorTexture(),
 					0, 0, 0, 0, 0, targetWidth, targetHeight);
@@ -163,6 +168,7 @@ public final class PackPipeline implements VulkirisPipeline {
 							waterDepthValid ? this.sceneCopy.getDepthTextureView() : mainTarget.getDepthTextureView(),
 							this.nearestSampler);
 					pass.setUniform("VulkirisParams", params);
+					pass.setUniform("VulkirisPackSettings", packSettings);
 					pass.draw(3, 1, 0, 0);
 				}
 				previous = output;
@@ -193,6 +199,7 @@ public final class PackPipeline implements VulkirisPipeline {
 							.withSampler("PreviousSampler")
 							.withSampler("WaterDepthSampler")
 							.withUniform("VulkirisParams", UniformType.UNIFORM_BUFFER)
+							.withUniform("VulkirisPackSettings", UniformType.UNIFORM_BUFFER)
 							.build())
 					.build());
 		}
@@ -246,6 +253,27 @@ public final class PackPipeline implements VulkirisPipeline {
 		RenderTarget target = descriptor.allocate();
 		descriptor.prepare(target);
 		return target;
+	}
+
+	/** Uploads the pack's declared setting values (padded to 8 floats, two vec4s). */
+	private GpuBufferSlice uploadSettings(CommandEncoder encoder) {
+		if (this.settingsBuffer == null) {
+			this.settingsBuffer = RenderSystem.getDevice().createBuffer(
+					() -> "vulkiris pack settings",
+					com.mojang.blaze3d.buffers.GpuBuffer.USAGE_UNIFORM | com.mojang.blaze3d.buffers.GpuBuffer.USAGE_COPY_DST,
+					32);
+			this.settingsSlice = this.settingsBuffer.slice();
+		}
+		this.settingsData.clear();
+		List<ShaderPack.Setting> settings = this.pack.settings();
+		for (int i = 0; i < 8; i++) {
+			this.settingsData.putFloat(i < settings.size()
+					? dev.vulkiris.pack.PackSettingsStore.value(this.packId, settings.get(i))
+					: 0.0f);
+		}
+		this.settingsData.rewind();
+		encoder.writeToBuffer(this.settingsSlice, this.settingsData);
+		return this.settingsSlice;
 	}
 
 	private void ensureSamplers() {
@@ -302,6 +330,11 @@ public final class PackPipeline implements VulkirisPipeline {
 			this.nearestSampler = null;
 		}
 		VulkirisUniforms.close();
+		if (this.settingsBuffer != null) {
+			this.settingsBuffer.close();
+			this.settingsBuffer = null;
+			this.settingsSlice = null;
+		}
 		this.passPipelines.clear();
 		this.fragmentSources.clear();
 		this.compiled = false;

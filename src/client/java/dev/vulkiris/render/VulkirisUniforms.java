@@ -42,10 +42,17 @@ import java.nio.ByteOrder;
  * vec4 SunScreen       (offset 368)  xy sun position in UV space, z on-screen flag, w easter-egg strength
  * vec4 Quality         (offset 384)  ao taps, god-ray taps, volumetric fog steps, film grain
  * vec4 Style           (offset 400)  selective bloom flag, rim light, toon flag, sunlight strength
+ * vec4 Celestial       (offset 416)  moon-mode flag (0 sun / 1 moon), moon phase brightness, moon visibility, unused
  * </pre>
+ *
+ * <p>SunDirView/SunScreen carry the ACTIVE celestial body: the sun by day, the moon at
+ * night (its direction is opposite the sun's). SunDirWorld always stays the true sun so
+ * sunset/day/night sky gradients keep their meaning.</p>
  */
 public final class VulkirisUniforms {
-	private static final int SIZE_BYTES = 416;
+	private static final int SIZE_BYTES = 432;
+	/** Moonlight brightness by {@code MoonPhase} ordinal (FULL_MOON = 0). */
+	private static final float[] MOON_PHASE_BRIGHTNESS = {1.0f, 0.8f, 0.55f, 0.3f, 0.05f, 0.3f, 0.55f, 0.8f};
 
 	private static final ByteBuffer data = ByteBuffer.allocateDirect(SIZE_BYTES).order(ByteOrder.nativeOrder());
 	private static final Matrix4f invProjection = new Matrix4f();
@@ -86,12 +93,25 @@ public final class VulkirisUniforms {
 		}
 		float sunVisibility = clamp01((sunDirWorld.y + 0.08f) / 0.24f) * (1.0f - rain * 0.6f);
 
+		// At night the moon (opposite the sun) becomes the active celestial body.
+		float phaseBrightness = MOON_PHASE_BRIGHTNESS[Math.floorMod(sky.moonPhase.ordinal(), MOON_PHASE_BRIGHTNESS.length)];
+		float moonVisibility = clamp01((-sunDirWorld.y + 0.08f) / 0.24f) * (1.0f - rain * 0.6f) * phaseBrightness * 0.65f;
+		boolean moonMode = moonVisibility > sunVisibility;
+		float celestialVisibility = moonMode ? moonVisibility : sunVisibility;
+		if (moonMode) {
+			sunDirWorld.negate();
+		}
+
 		Matrix4fc view = modelViewMatrix != null ? modelViewMatrix : cameraState.viewRotationMatrix;
 		invViewRot.set(view).invert();
 		view.transformDirection(sunDirWorld, sunDirView).normalize();
 		view.transformDirection(0.0f, 1.0f, 0.0f, upDirView).normalize();
+		if (moonMode) {
+			// Restore the true sun for the world-space sky gradients.
+			sunDirWorld.negate();
+		}
 
-		// Project the sun direction to screen UV for the god-ray march.
+		// Project the active celestial direction to screen UV for the god-ray march.
 		sunClip.set(sunDirView.x, sunDirView.y, sunDirView.z, 0.0f);
 		cameraState.projectionMatrix.transform(sunClip);
 		float sunU = 0.0f;
@@ -127,7 +147,7 @@ public final class VulkirisUniforms {
 		data.position(128);
 		cameraState.projectionMatrix.get(data);
 		data.position(192);
-		putVec4(sunDirView.x, sunDirView.y, sunDirView.z, sunVisibility);
+		putVec4(sunDirView.x, sunDirView.y, sunDirView.z, celestialVisibility);
 		putVec4(sunDirWorld.x, sunDirWorld.y, sunDirWorld.z, config.skyIntensity);
 		putVec4(upDirView.x, upDirView.y, upDirView.z, (float) cameraState.pos.y);
 		putVec4((float) cameraState.pos.x, (float) cameraState.pos.y, (float) cameraState.pos.z, rain);
@@ -145,6 +165,7 @@ public final class VulkirisUniforms {
 		int fogSteps = config.quality >= 2 ? 20 : config.quality == 1 ? 12 : 0;
 		putVec4(aoTaps, rayTaps, fogSteps, config.filmGrain);
 		putVec4(config.selectiveBloom ? 1.0f : 0.0f, config.rimLight, config.toon ? 1.0f : 0.0f, config.sunlight);
+		putVec4(moonMode ? 1.0f : 0.0f, phaseBrightness, moonVisibility, 0.0f);
 		data.rewind();
 	}
 

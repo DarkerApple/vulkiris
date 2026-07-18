@@ -98,20 +98,32 @@ public final class VulkirisSettingsScreen extends Screen {
 	}
 
 	private void buildPresets(VulkirisConfig config) {
-		List<String> ids = VulkirisPresets.ids();
-		for (String id : ids) {
-			boolean active = id.equals(config.preset);
-			Component name = VulkirisPresets.displayName(id);
-			this.place(this.addRenderableWidget(Button.builder(active ? Component.literal("➤ ").append(name) : name, b -> {
-				VulkirisPresets.apply(id);
-				PipelineManager.active().clearFailure();
-				this.status = Component.translatable("vulkiris.msg.preset", VulkirisPresets.displayName(id));
-				this.rebuild();
-			}).build()));
+		// Built-in group, then user groups (My Presets / Imported), separated by blank rows.
+		for (String id : VulkirisPresets.builtInIds()) {
+			this.addPresetButton(config, id);
 		}
-		if (this.nextIndex % 2 == 1) {
-			this.nextIndex++;
+		List<String> mine = VulkirisPresets.userIds().stream().filter(id -> !VulkirisPresets.isImported(id)).toList();
+		List<String> imported = VulkirisPresets.userIds().stream().filter(VulkirisPresets::isImported).toList();
+		if (!mine.isEmpty()) {
+			this.rowBreak();
+			for (String id : mine) {
+				this.addPresetButton(config, id);
+			}
 		}
+		if (!imported.isEmpty()) {
+			this.rowBreak();
+			for (String id : imported) {
+				this.addPresetButton(config, id);
+			}
+		}
+		this.rowBreak();
+		this.place(this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.save_preset"), b -> {
+			String savedId = VulkirisPresets.saveCurrentAs();
+			this.status = savedId != null
+					? Component.translatable("vulkiris.msg.preset_saved", savedId)
+					: Component.translatable("vulkiris.msg.import_failed");
+			this.rebuild();
+		}).build()));
 		this.place(this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.export"), b -> {
 			VulkirisPresets.exportToClipboard(this.minecraft);
 			this.status = Component.translatable("vulkiris.msg.exported");
@@ -124,6 +136,24 @@ public final class VulkirisSettingsScreen extends Screen {
 			PipelineManager.active().clearFailure();
 			this.rebuild();
 		}).build()));
+	}
+
+	private void addPresetButton(VulkirisConfig config, String id) {
+		boolean active = id.equals(config.preset);
+		Component name = VulkirisPresets.displayName(id);
+		this.place(this.addRenderableWidget(Button.builder(active ? Component.literal("\u27a4 ").append(name) : name, b -> {
+			VulkirisPresets.apply(id);
+			PipelineManager.active().clearFailure();
+			this.status = Component.translatable("vulkiris.msg.preset", VulkirisPresets.displayName(id));
+			this.rebuild();
+		}).build()));
+	}
+
+	/** Starts the next widget on a fresh row (a visual group separator). */
+	private void rowBreak() {
+		if (this.nextIndex % 2 == 1) {
+			this.nextIndex++;
+		}
 	}
 
 	private void buildLook(VulkirisConfig config) {

@@ -2,10 +2,13 @@ package dev.vulkiris.gui;
 
 import dev.vulkiris.config.VulkirisConfig;
 import dev.vulkiris.pack.PackRepository;
+import dev.vulkiris.pack.PackSettingsStore;
+import dev.vulkiris.pack.ShaderPack;
 import dev.vulkiris.pipeline.DefaultPipeline;
 import dev.vulkiris.pipeline.PackPipeline;
 import dev.vulkiris.pipeline.PipelineManager;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -20,10 +23,10 @@ import java.util.List;
  * immediately and persists to the config.
  */
 public final class VulkirisPacksScreen extends Screen {
-	private static final int WIDGET_WIDTH = 220;
+	private static final int WIDGET_WIDTH = 210;
 	private static final int WIDGET_HEIGHT = 20;
 	private static final int GAP_Y = 4;
-	private static final int MAX_LISTED = 12;
+	private static final int MAX_LISTED = 10;
 
 	private final @Nullable Screen parent;
 	private Component status = Component.empty();
@@ -36,7 +39,8 @@ public final class VulkirisPacksScreen extends Screen {
 	@Override
 	protected void init() {
 		PackRepository.ensureDir();
-		int x = (this.width - WIDGET_WIDTH) / 2;
+		boolean wide = this.width >= 2 * WIDGET_WIDTH + 30;
+		int x = wide ? this.width / 2 - WIDGET_WIDTH - 10 : (this.width - WIDGET_WIDTH) / 2;
 		int y = 32;
 
 		String active = VulkirisConfig.get().pipeline;
@@ -67,6 +71,80 @@ public final class VulkirisPacksScreen extends Screen {
 		done.setWidth(WIDGET_WIDTH);
 		done.setX(x);
 		done.setY(bottomY + WIDGET_HEIGHT + GAP_Y);
+
+		if (wide) {
+			this.buildActivePackControls(this.width / 2 + 10, 32);
+		}
+	}
+
+	/** Sliders and pack presets for the ACTIVE pack, when it declares any settings. */
+	private void buildActivePackControls(int x, int y) {
+		String active = VulkirisConfig.get().pipeline;
+		if (active == null || !active.startsWith("pack:")) {
+			return;
+		}
+		String packId = active.substring("pack:".length());
+		try (ShaderPack opened = PackRepository.open(packId)) {
+			if (opened.settings().isEmpty() && opened.presets().isEmpty()) {
+				return;
+			}
+			// Pack presets: small buttons in rows of two.
+			int count = 0;
+			for (var preset : opened.presets().entrySet()) {
+				Button presetButton = this.addRenderableWidget(Button.builder(Component.literal(preset.getKey()), b -> {
+					PackSettingsStore.applyPreset(packId, preset.getValue());
+					this.rebuild();
+				}).build());
+				presetButton.setWidth(WIDGET_WIDTH / 2 - 2);
+				presetButton.setX(count % 2 == 0 ? x : x + WIDGET_WIDTH / 2 + 2);
+				presetButton.setY(y);
+				count++;
+				if (count % 2 == 0) {
+					y += WIDGET_HEIGHT + GAP_Y;
+				}
+			}
+			if (count % 2 == 1) {
+				y += WIDGET_HEIGHT + GAP_Y;
+			}
+			// Setting sliders.
+			for (ShaderPack.Setting setting : opened.settings()) {
+				float current = PackSettingsStore.value(packId, setting);
+				var slider = this.addRenderableWidget(new PackSettingSlider(packId, setting, current));
+				slider.setWidth(WIDGET_WIDTH);
+				slider.setX(x);
+				slider.setY(y);
+				y += WIDGET_HEIGHT + GAP_Y;
+			}
+		} catch (Exception e) {
+			// Unreadable pack: the list already shows it; nothing to build here.
+		}
+	}
+
+	private static final class PackSettingSlider extends AbstractSliderButton {
+		private final String packId;
+		private final ShaderPack.Setting setting;
+
+		PackSettingSlider(String packId, ShaderPack.Setting setting, float current) {
+			super(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.empty(),
+					(current - setting.min()) / (setting.max() - setting.min()));
+			this.packId = packId;
+			this.setting = setting;
+			this.updateMessage();
+		}
+
+		@Override
+		protected void updateMessage() {
+			this.setMessage(Component.literal(String.format("%s: %.2f", this.setting.name(), this.current())));
+		}
+
+		@Override
+		protected void applyValue() {
+			PackSettingsStore.set(this.packId, this.setting.id(), this.current());
+		}
+
+		private float current() {
+			return this.setting.min() + (float) this.value * (this.setting.max() - this.setting.min());
+		}
 	}
 
 	private int addEntry(int x, int y, Component text, Runnable onPress) {

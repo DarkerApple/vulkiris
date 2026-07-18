@@ -58,7 +58,7 @@ public final class VulkirisRenderer {
 		try {
 			int width = Math.max(1, mainTarget.width);
 			int height = Math.max(1, mainTarget.height);
-			TARGETS.ensure(width, height);
+			TARGETS.ensure(width, height, VulkirisConfig.get().quality <= 0 ? 4 : 2);
 			RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(
 					mainTarget.getDepthTexture(), TARGETS.sceneCopy.getDepthTexture(),
 					0, 0, 0, 0, 0, width, height);
@@ -130,9 +130,16 @@ public final class VulkirisRenderer {
 		ensureSamplers();
 		int width = Math.max(1, mainTarget.width);
 		int height = Math.max(1, mainTarget.height);
-		TARGETS.ensure(width, height);
+		// Lite quality shrinks the bloom chain to quarter resolution for FPS.
+		TARGETS.ensure(width, height, config.quality <= 0 ? 4 : 2);
 
 		boolean bloomChainRuns = config.bloom || config.aoStrength > 0.0f;
+		// Fast path: when no effect needs the heavy composite, a minimal shader with
+		// two samplers runs instead — this is what makes Potato-class presets cheap.
+		boolean litePath = !bloomChainRuns && !waterDepthValid && config.godRays <= 0.0f
+				&& config.rimLight <= 0.0f && !config.toon && config.ssrSteps == 0
+				&& config.sunSpecular <= 0.0f && config.sunlight <= 0.0f
+				&& config.lightBleed <= 0.0f && config.quality <= 0;
 		VulkirisUniforms.prepare(config, cameraState, levelRenderState, modelViewMatrix, fogColor,
 				deltaTracker, mainTarget, waterDepthValid, bloomChainRuns);
 
@@ -162,15 +169,23 @@ public final class VulkirisRenderer {
 				}
 			}
 
-			fullscreenPass(encoder, VulkirisPipelines.composite, mainTarget.getColorTextureView(), pass -> {
-				pass.bindTexture("SceneColorSampler", TARGETS.sceneCopy.getColorTextureView(), nearestSampler);
-				pass.bindTexture("SceneDepthSampler", mainTarget.getDepthTextureView(), nearestSampler);
-				// Pre-translucent depth snapshot; stale when water is off, but gated in the shader.
-				pass.bindTexture("WaterDepthSampler", TARGETS.sceneCopy.getDepthTextureView(), nearestSampler);
-				// Always bound: the bind group requires it even when bloom and AO are off.
-				pass.bindTexture("BloomSampler", TARGETS.bloomA.getColorTextureView(), linearSampler);
-				pass.setUniform("VulkirisParams", params);
-			});
+			if (litePath) {
+				fullscreenPass(encoder, VulkirisPipelines.compositeLite, mainTarget.getColorTextureView(), pass -> {
+					pass.bindTexture("SceneColorSampler", TARGETS.sceneCopy.getColorTextureView(), nearestSampler);
+					pass.bindTexture("SceneDepthSampler", mainTarget.getDepthTextureView(), nearestSampler);
+					pass.setUniform("VulkirisParams", params);
+				});
+			} else {
+				fullscreenPass(encoder, VulkirisPipelines.composite, mainTarget.getColorTextureView(), pass -> {
+					pass.bindTexture("SceneColorSampler", TARGETS.sceneCopy.getColorTextureView(), nearestSampler);
+					pass.bindTexture("SceneDepthSampler", mainTarget.getDepthTextureView(), nearestSampler);
+					// Pre-translucent depth snapshot; stale when water is off, but gated in the shader.
+					pass.bindTexture("WaterDepthSampler", TARGETS.sceneCopy.getDepthTextureView(), nearestSampler);
+					// Always bound: the bind group requires it even when bloom and AO are off.
+					pass.bindTexture("BloomSampler", TARGETS.bloomA.getColorTextureView(), linearSampler);
+					pass.setUniform("VulkirisParams", params);
+				});
+			}
 
 			if (config.fxaa) {
 				copyColor(encoder, mainTarget, TARGETS.sceneCopy, width, height);

@@ -1,0 +1,15 @@
+{
+	"name": "Vulkiris Aurora",
+	"author": "Vulkiris",
+	"passes": [
+		{ "fragment": "shaders/aurora.fsh" }
+	],
+	"settings": [
+		{ "id": "intensity", "name": "Intensity", "min": 0.0, "max": 1.0, "default": 0.6 },
+		{ "id": "aurora", "name": "Aurora Bands", "min": 0.0, "max": 1.0, "default": 0.7 }
+	],
+	"presets": {
+		"Calm": { "intensity": 0.35, "aurora": 0.4 },
+		"Vivid": { "intensity": 0.85, "aurora": 1.0 }
+	}
+}

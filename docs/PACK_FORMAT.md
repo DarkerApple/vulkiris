@@ -1,4 +1,4 @@
-# Vulkiris shader pack format (v1.1)
+# Vulkiris shader pack format (v1.2)
 
 Make your own shader and share it — a Vulkiris pack is a folder (or `.zip`) dropped into
 the game's `shaderpacks/` directory. Select it in game: **O → Shader Packs…**
@@ -40,6 +40,13 @@ shaderpacks/
 - `waterDepth` — optional: when `true`, the depth buffer is snapshotted right before
   water/translucent terrain draws and bound to every pass as `WaterDepthSampler`
   (compare it against `SceneDepthSampler` to find water surfaces).
+- `settings` — optional (max 8): user-tunable sliders shown in the pack screen while
+  your pack is active. Each entry: `{"id": "strength", "name": "Strength", "min": 0,
+  "max": 1, "default": 0.5}`. Read them in GLSL via
+  `#moj_import <vulkiris:pack_settings.glsl>` — values arrive in declaration order as
+  `PackA.xyzw` then `PackB.xyzw`.
+- `presets` — optional (max 6): named value sets shown as buttons above the sliders,
+  e.g. `"presets": {"Calm": {"strength": 0.3}, "Vivid": {"strength": 0.9}}`.
 
 ## Writing a pass
 

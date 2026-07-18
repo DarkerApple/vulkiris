@@ -19,19 +19,22 @@ final class PostFxTargets {
 	RenderTarget bloomB;
 	private int width = -1;
 	private int height = -1;
+	private int bloomDivisor = 2;
 
-	void ensure(int targetWidth, int targetHeight) {
+	/** Bloom targets are screen size / divisor: 2 normally, 4 at Lite quality for FPS. */
+	void ensure(int targetWidth, int targetHeight, int divisor) {
 		// Check every target so a partially-failed allocation is rebuilt on retry.
 		if (this.sceneCopy != null && this.bloomA != null && this.bloomB != null
-				&& this.width == targetWidth && this.height == targetHeight) {
+				&& this.width == targetWidth && this.height == targetHeight && this.bloomDivisor == divisor) {
 			return;
 		}
 		this.close();
 		this.width = targetWidth;
 		this.height = targetHeight;
+		this.bloomDivisor = divisor;
 		this.sceneCopy = create(targetWidth, targetHeight, true);
-		int bloomWidth = Math.max(1, targetWidth / 2);
-		int bloomHeight = Math.max(1, targetHeight / 2);
+		int bloomWidth = Math.max(1, targetWidth / divisor);
+		int bloomHeight = Math.max(1, targetHeight / divisor);
 		this.bloomA = create(bloomWidth, bloomHeight, false);
 		this.bloomB = create(bloomWidth, bloomHeight, false);
 	}

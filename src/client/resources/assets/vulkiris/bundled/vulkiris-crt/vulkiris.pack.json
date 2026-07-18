@@ -1,0 +1,15 @@
+{
+	"name": "Vulkiris CRT",
+	"author": "Vulkiris",
+	"passes": [
+		{ "fragment": "shaders/crt.fsh" }
+	],
+	"settings": [
+		{ "id": "curvature", "name": "Curvature", "min": 0.0, "max": 0.2, "default": 0.08 },
+		{ "id": "scanline", "name": "Scanlines", "min": 0.0, "max": 0.4, "default": 0.15 }
+	],
+	"presets": {
+		"Subtle": { "curvature": 0.05, "scanline": 0.08 },
+		"Arcade": { "curvature": 0.14, "scanline": 0.3 }
+	}
+}

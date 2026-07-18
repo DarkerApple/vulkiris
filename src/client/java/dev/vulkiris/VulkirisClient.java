@@ -53,6 +53,7 @@ public final class VulkirisClient implements ClientModInitializer {
 			DeviceInfo info = RenderSystem.getDevice().getDeviceInfo();
 			LOGGER.info("Vulkiris running on the {} backend ({}, {})", info.backendName(), info.vendorName(), info.name());
 			PackRepository.ensureDir();
+			dev.vulkiris.pack.BundledPacks.installMissing();
 			String pipeline = VulkirisConfig.get().pipeline;
 			if (pipeline != null && pipeline.startsWith("pack:")) {
 				PipelineManager.setActive(new PackPipeline(pipeline.substring("pack:".length())));
