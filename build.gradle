@@ -21,21 +21,12 @@ loom {
 	}
 }
 
-repositories {
-	maven {
-		name = "Terraformers"
-		url = "https://maven.terraformersmc.com/"
-	}
-}
-
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	// Compile-time only: the entrypoint is loaded solely when ModMenu is installed.
-	compileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") {
-		transitive = false
-	}
+	// ModMenu integration compiles against local stubs (src/client/java/com/terraformersmc),
+	// which are excluded from the jar below — no remote ModMenu artifact needed to build.
 }
 
 processResources {
@@ -57,6 +48,9 @@ java {
 tasks.named("jar", Jar).configure {
 	archiveVersion = "${project.mod_version}+mc${project.minecraft_version}"
 
+	// The ModMenu API stubs are compile-time only; the real ModMenu provides them at runtime.
+	exclude("com/terraformersmc/**")
+
 	from("LICENSE") {
 		rename { "${it}_${project.base.archivesName.get()}" }
 	}
@@ -64,6 +58,7 @@ tasks.named("jar", Jar).configure {
 
 tasks.named("sourcesJar", Jar).configure {
 	archiveVersion = "${project.mod_version}+mc${project.minecraft_version}"
+	exclude("com/terraformersmc/**")
 }
 
 publishing {
