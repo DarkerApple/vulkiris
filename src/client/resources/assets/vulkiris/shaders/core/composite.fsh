@@ -94,6 +94,15 @@ void main() {
         color *= mix(1.0, clamp(bloomTap.a, 0.0, 1.0), Extra.y * (1.0 - underwater * 0.5));
     }
 
+    // --- Directional sunlight: warm sun-facing surfaces, cool shadow sides. ---
+    if (Style.w > 0.001 && !isSky) {
+        float lit = clamp(dot(faceNormal, SunDirView.xyz), 0.0, 1.0) * SunDirView.w;
+        float shade = (1.0 - clamp(dot(faceNormal, SunDirView.xyz), 0.0, 1.0)) * SunDirView.w;
+        float s = Style.w;
+        color *= vec3(1.0 + 0.26 * lit * s, 1.0 + 0.15 * lit * s, 1.0 - 0.05 * lit * s);
+        color *= vec3(1.0 - 0.09 * shade * s, 1.0 - 0.035 * shade * s, 1.0 + 0.05 * shade * s);
+    }
+
     // --- Depth-normal sun specular on all surfaces ("PBR-ish" gloss). ---
     if (Extra2.x > 0.001 && !isSky) {
         float spec = pow(max(dot(reflect(viewDir, faceNormal), SunDirView.xyz), 0.0), 24.0) * SunDirView.w;
@@ -311,6 +320,15 @@ void main() {
         float toSun = max(dot(viewDir, SunDirView.xyz), 0.0);
         vec3 shaftColor = Fog.rgb * vec3(1.35, 1.05, 0.75);
         color += shaftColor * clamp(illumination, 0.0, 1.0) * pow(toSun, 3.0) * Extra.w * SunDirView.w * 0.5;
+    }
+
+    // --- Layered sun halo on the sky: tight glow, corona, and wide atmosphere. ---
+    if (isSky && SunDirView.w > 0.01 && underwater < 0.5 && Style.w > 0.001) {
+        float sunDot = max(dot(viewDir, SunDirView.xyz), 0.0);
+        float lowSun = 1.0 - clamp(SunDirWorld.y * 2.0, 0.0, 1.0);
+        vec3 haloColor = mix(vec3(1.0, 0.95, 0.85), vec3(1.0, 0.62, 0.30), lowSun);
+        float halo = pow(sunDot, 900.0) * 1.1 + pow(sunDot, 90.0) * 0.35 + pow(sunDot, 12.0) * 0.10;
+        color += haloColor * halo * SunDirView.w * (0.4 + 0.6 * Style.w);
     }
 
     // --- Sky, sunset, and cloud grading (clouds write depth, so far pixels catch it too). ---

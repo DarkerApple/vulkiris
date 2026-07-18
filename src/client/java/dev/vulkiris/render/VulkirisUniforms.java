@@ -41,7 +41,7 @@ import java.nio.ByteOrder;
  * vec4 Extra2          (offset 352)  sun specular, light bleed, ssr steps, easter-egg mode
  * vec4 SunScreen       (offset 368)  xy sun position in UV space, z on-screen flag, w easter-egg strength
  * vec4 Quality         (offset 384)  ao taps, god-ray taps, volumetric fog steps, film grain
- * vec4 Style           (offset 400)  selective bloom flag, rim light, toon flag, unused
+ * vec4 Style           (offset 400)  selective bloom flag, rim light, toon flag, sunlight strength
  * </pre>
  */
 public final class VulkirisUniforms {
@@ -144,7 +144,7 @@ public final class VulkirisUniforms {
 		int rayTaps = config.quality >= 2 ? 48 : config.quality == 1 ? 28 : 14;
 		int fogSteps = config.quality >= 2 ? 20 : config.quality == 1 ? 12 : 0;
 		putVec4(aoTaps, rayTaps, fogSteps, config.filmGrain);
-		putVec4(config.selectiveBloom ? 1.0f : 0.0f, config.rimLight, config.toon ? 1.0f : 0.0f, 0.0f);
+		putVec4(config.selectiveBloom ? 1.0f : 0.0f, config.rimLight, config.toon ? 1.0f : 0.0f, config.sunlight);
 		data.rewind();
 	}
 

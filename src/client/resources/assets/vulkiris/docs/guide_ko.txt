@@ -1,0 +1,61 @@
+§e§lVULKIRIS 빠른 가이드§r
+
+Vulkiris는 마인크래프트의 Vulkan(및 OpenGL) 백엔드용 셰이더 플랫폼입니다. 내장 기본 셰이더가 포함되어 있으며, 직접 만든 셰이더 팩을 불러올 수 있습니다.
+
+§e§l조작법§r
+K — 효과 켜기/끄기
+P — 다음 프리셋
+O — 이 설정 화면
+프리셋 탭 — 원하는 룩 선택; 내보내기/가져오기로 클립보드 공유.
+
+§e§l나만의 셰이더 팩 만들기§r
+1. 팩 폴더 열기 (셰이더 팩 → 팩 폴더 열기).
+2. §bmy-pack§r 같은 폴더를 만들고 §bvulkiris.pack.json§r과 §bshaders§r 폴더를 넣습니다.
+3. 셰이더 팩 화면에서 선택하세요. 수정 후 다시 선택하면 적용 — 재시작 불필요.
+
+§e§lvulkiris.pack.json§r
+{
+ "name": "My Pack",
+ "author": "you",
+ "waterDepth": false,
+ "passes": [
+  { "fragment": "shaders/main.fsh" }
+ ]
+}
+최대 8개의 패스가 매 프레임 순서대로 실행됩니다. "scale"(0.1–1.0)은 패스 출력 해상도를 줄여 저렴한 블러에 유용하며, 마지막 패스는 항상 전체 화면에 그립니다.
+
+§e§l패스 작성하기§r
+패스는 §bin vec2 texCoord§r와 §bout vec4 fragColor§r를 가진 GLSL 330입니다. 사용 가능:
+§bSceneColorSampler§r — 원본 장면
+§bSceneDepthSampler§r — 깊이 (반전: 하늘이 0.0)
+§bPreviousSampler§r — 이전 패스 출력
+§bWaterDepthSampler§r — 물 이전 깊이 ("waterDepth": true 설정)
+§bVulkirisParams§r — 시간, 태양, 카메라, 행렬, 안개
+
+파라미터 블록 가져오기:
+#moj_import <vulkiris:params.glsl>
+팩 내부 파일은 따옴표로: #moj_import "lib/util.glsl"
+
+§e§l최소 예제§r
+#version 330
+#moj_import <vulkiris:params.glsl>
+uniform sampler2D PreviousSampler;
+in vec2 texCoord;
+out vec4 fragColor;
+void main() {
+  vec3 c = texture(PreviousSampler, texCoord).rgb;
+  c *= 0.8 + 0.2 * sin(Screen.z * 3.0);
+  fragColor = vec4(c, 1.0);
+}
+
+§e§l팁§r
+- 바닐라 문법의 GLSL을 쓰세요: #version 330, layout(binding=...) 없이 — 게임이 OpenGL과 Vulkan 양쪽으로 컴파일합니다.
+- Vulkan은 검증이 엄격합니다. 팩이 실패하면 게임 로그에 컴파일 오류가 표시되고, Vulkiris는 재시도 후 안전하게 복구합니다.
+- 깊이 → 뷰 공간 변환: InvProjection으로 언프로젝트 (내장 composite.fsh 참고).
+- 팩 폴더를 zip으로 압축해 공유하세요. zip도 바로 로드됩니다.
+
+§e§lIris 호환 현황§r
+현재 지원: Iris 스타일 composite/final 포스트 패스, 패스별 해상도, 깊이 + 물 깊이 입력, 공용 유니폼, zip 팩, 실시간 재선택.
+예정: 다중 버퍼 타깃, 팩 자체 설정 UI, 지형/엔티티 프로그램 변환 (바닐라 Vulkan 컴파일러가 GL보다 엄격해 완전한 Iris 팩은 단계적으로 지원됩니다).
+
+표가 포함된 전체 가이드는 아래 "웹 가이드"를 누르세요.

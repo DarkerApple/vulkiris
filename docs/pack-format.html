@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vulkiris Shader Pack Guide</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; max-width: 860px;
+         margin: 2rem auto; padding: 0 1.2rem; line-height: 1.6;
+         background: #0d1426; color: #e8edf4; }
+  h1, h2 { color: #48d6ea; }
+  h1 { border-bottom: 2px solid #175c8a; padding-bottom: .4rem; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: #16203a;
+              border-radius: 6px; }
+  code { padding: .1rem .35rem; }
+  pre { padding: .9rem 1rem; overflow-x: auto; border: 1px solid #23345c; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { border: 1px solid #23345c; padding: .5rem .7rem; text-align: left; }
+  th { background: #16203a; color: #ffd486; }
+  .tip { border-left: 4px solid #ffa43c; background: #16203a; padding: .6rem 1rem;
+         border-radius: 0 6px 6px 0; margin: 1rem 0; }
+  a { color: #7fd8ff; }
+</style>
+</head>
+<body>
+<h1>🌇 Vulkiris Shader Pack Guide (format v1.1)</h1>
+<p>A Vulkiris pack is a folder (or <code>.zip</code>) in the game's <code>shaderpacks/</code>
+directory. Select it in game via <b>O → Shader Packs…</b>. Because packs are compiled by
+Minecraft's own shader compiler, one pack runs on <b>both the OpenGL and Vulkan backends</b> —
+write vanilla-dialect GLSL (<code>#version 330</code>, no <code>layout(binding=…)</code>).</p>
+
+<h2>Layout</h2>
+<pre>shaderpacks/
+└── my-pack/                (or my-pack.zip)
+    ├── vulkiris.pack.json
+    └── shaders/
+        ├── first.fsh
+        └── final.fsh</pre>
+
+<h2>vulkiris.pack.json</h2>
+<pre>{
+  "name": "My Pack",
+  "author": "you",
+  "waterDepth": false,
+  "passes": [
+    { "fragment": "shaders/first.fsh", "scale": 0.5 },
+    { "fragment": "shaders/final.fsh" }
+  ]
+}</pre>
+<table>
+  <tr><th>Field</th><th>Meaning</th></tr>
+  <tr><td><code>passes</code></td><td>Up to 8 fullscreen passes, run in order every frame after the world renders.</td></tr>
+  <tr><td><code>fragment</code></td><td>Pack-relative path to the pass's fragment shader.</td></tr>
+  <tr><td><code>scale</code></td><td>Optional (default 1.0, range 0.1–1.0): output resolution relative to the screen — great for cheap blur chains. The last pass always draws full-resolution.</td></tr>
+  <tr><td><code>waterDepth</code></td><td>Optional: when true, the depth buffer is snapshotted before water/translucent terrain draws and bound as <code>WaterDepthSampler</code>.</td></tr>
+</table>
+
+<h2>Writing a pass</h2>
+<p>Each pass is a fragment shader over a fullscreen triangle with <code>in vec2 texCoord</code>
+(0–1) and <code>out vec4 fragColor</code>. Declare only what you use from:</p>
+<table>
+  <tr><th>Name</th><th>What it is</th></tr>
+  <tr><td><code>sampler2D SceneColorSampler</code></td><td>The untouched scene, snapshotted before your passes ran</td></tr>
+  <tr><td><code>sampler2D SceneDepthSampler</code></td><td>The live depth buffer (26.2 uses <b>reversed depth</b>: sky ≈ 0.0)</td></tr>
+  <tr><td><code>sampler2D PreviousSampler</code></td><td>Output of the previous pass (first pass: the scene snapshot)</td></tr>
+  <tr><td><code>sampler2D WaterDepthSampler</code></td><td>Pre-water depth snapshot (needs <code>"waterDepth": true</code>)</td></tr>
+  <tr><td><code>VulkirisParams</code> block</td><td>Time, sun direction (view + world), camera position, matrices, fog color, and more</td></tr>
+</table>
+
+<p>Pull in the shared uniform block (expanded by Vulkiris at load time), or your own pack
+files with quotes:</p>
+<pre>#moj_import &lt;vulkiris:params.glsl&gt;
+#moj_import "lib/util.glsl"</pre>
+
+<h2>Minimal example</h2>
+<pre>#version 330
+
+#moj_import &lt;vulkiris:params.glsl&gt;
+
+uniform sampler2D PreviousSampler;
+
+in vec2 texCoord;
+out vec4 fragColor;
+
+void main() {
+    vec3 color = texture(PreviousSampler, texCoord).rgb;
+    // Screen.z is world time in seconds:
+    color *= 0.8 + 0.2 * sin(Screen.z * 3.0);
+    fragColor = vec4(color, 1.0);
+}</pre>
+
+<div class="tip"><b>Iterate fast:</b> edit your pack, then re-select it in the pack screen
+(or Refresh + click) — no game restart. Compile errors appear in the game log with the
+compiler's message; Vulkiris retries a few times, then falls back safely.</div>
+
+<h2>Tips</h2>
+<ul>
+  <li>Depth → view-space position: unproject with <code>InvProjection</code>; see the
+      built-in <code>composite.fsh</code> for the reversed-depth pattern.</li>
+  <li>The Vulkan backend validates more strictly than OpenGL — if a pack compiles on GL
+      but not Vulkan, the logged <code>ShaderCompileException</code> says why.</li>
+  <li>Zip the pack folder to share it; zips load directly.</li>
+</ul>
+
+<h2>Iris parity status</h2>
+<p><b>Supported today:</b> Iris-style composite/final post passes, per-pass scale, depth
+and water-depth inputs, shared uniforms, zip packs, live re-select.<br>
+<b>Planned:</b> multi-buffer targets, pack-defined settings surfaced in the Vulkiris UI,
+and translated terrain/entity programs — the vanilla Vulkan compiler is stricter than GL
+and the gbuffer model differs, so full Iris packs land incrementally.</p>
+</body>
+</html>

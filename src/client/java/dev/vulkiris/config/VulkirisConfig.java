@@ -48,6 +48,17 @@ public final class VulkirisConfig {
 	/** Cel-shaded look: quantized lighting bands plus dark depth-edge outlines. */
 	public boolean toon = false;
 
+	/** Directional sunlight: warm tint on sun-facing surfaces, cool shadow sides, sun halo. */
+	public float sunlight = 0.55f;
+
+	// --- Viewmodel (independent of presets) ---
+	public float vmScale = 1.0f;
+	public float vmOffsetX = 0.0f;
+	public float vmOffsetY = 0.0f;
+	public float vmRotation = 0.0f;
+	/** Extra roll/dip punch layered onto the vanilla swing; 0 disables. */
+	public float vmSwing = 0.0f;
+
 	public boolean fog = true;
 	public float fogDensity = 0.45f;
 	public float sunScatter = 0.6f;
@@ -133,6 +144,7 @@ public final class VulkirisConfig {
 		selectiveBloom = other.selectiveBloom;
 		rimLight = other.rimLight;
 		toon = other.toon;
+		sunlight = other.sunlight;
 		fog = other.fog;
 		fogDensity = other.fogDensity;
 		sunScatter = other.sunScatter;
@@ -197,6 +209,12 @@ public final class VulkirisConfig {
 		bloomThreshold = clamp(bloomThreshold, 0.0f, 1.0f);
 		lightBleed = clamp(lightBleed, 0.0f, 1.0f);
 		rimLight = clamp(rimLight, 0.0f, 1.0f);
+		sunlight = clamp(sunlight, 0.0f, 1.5f);
+		vmScale = clamp(vmScale, 0.5f, 1.5f);
+		vmOffsetX = clamp(vmOffsetX, -0.5f, 0.5f);
+		vmOffsetY = clamp(vmOffsetY, -0.5f, 0.5f);
+		vmRotation = clamp(vmRotation, -60.0f, 60.0f);
+		vmSwing = clamp(vmSwing, 0.0f, 1.0f);
 		fogDensity = clamp(fogDensity, 0.0f, 1.0f);
 		sunScatter = clamp(sunScatter, 0.0f, 2.0f);
 		skyIntensity = clamp(skyIntensity, 0.0f, 1.5f);

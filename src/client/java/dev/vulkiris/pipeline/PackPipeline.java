@@ -66,6 +66,7 @@ public final class PackPipeline implements VulkirisPipeline {
 	private boolean compiled;
 	private int consecutiveFailures;
 	private boolean failed;
+	private boolean waterDepthCaptured;
 
 	public PackPipeline(String packId) {
 		this.packId = packId;
@@ -131,6 +132,9 @@ public final class PackPipeline implements VulkirisPipeline {
 		VulkirisUniforms.prepare(config, cameraState, levelRenderState, modelViewMatrix, fogColor,
 				deltaTracker, mainTarget, false, false);
 
+		boolean waterDepthValid = this.waterDepthCaptured;
+		this.waterDepthCaptured = false;
+
 		CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
 		try {
 			GpuBufferSlice params = VulkirisUniforms.upload(encoder);
@@ -155,6 +159,9 @@ public final class PackPipeline implements VulkirisPipeline {
 					pass.bindTexture("SceneColorSampler", this.sceneCopy.getColorTextureView(), this.nearestSampler);
 					pass.bindTexture("SceneDepthSampler", mainTarget.getDepthTextureView(), this.nearestSampler);
 					pass.bindTexture("PreviousSampler", previousFinal.getColorTextureView(), this.linearSampler);
+					pass.bindTexture("WaterDepthSampler",
+							waterDepthValid ? this.sceneCopy.getDepthTextureView() : mainTarget.getDepthTextureView(),
+							this.nearestSampler);
 					pass.setUniform("VulkirisParams", params);
 					pass.draw(3, 1, 0, 0);
 				}
@@ -184,6 +191,7 @@ public final class PackPipeline implements VulkirisPipeline {
 							.withSampler("SceneColorSampler")
 							.withSampler("SceneDepthSampler")
 							.withSampler("PreviousSampler")
+							.withSampler("WaterDepthSampler")
 							.withUniform("VulkirisParams", UniformType.UNIFORM_BUFFER)
 							.build())
 					.build());
@@ -219,7 +227,7 @@ public final class PackPipeline implements VulkirisPipeline {
 		this.closeTargets();
 		this.width = targetWidth;
 		this.height = targetHeight;
-		this.sceneCopy = createTarget(targetWidth, targetHeight);
+		this.sceneCopy = createTarget(targetWidth, targetHeight, this.pack.waterDepth());
 		List<ShaderPack.Pass> passes = this.pack.passes();
 		for (int i = 0; i < passes.size() - 1; i++) {
 			float scale = passes.get(i).scale();
@@ -230,7 +238,11 @@ public final class PackPipeline implements VulkirisPipeline {
 	}
 
 	private static RenderTarget createTarget(int targetWidth, int targetHeight) {
-		RenderTargetDescriptor descriptor = new RenderTargetDescriptor(targetWidth, targetHeight, false, CLEAR, GpuFormat.RGBA8_UNORM);
+		return createTarget(targetWidth, targetHeight, false);
+	}
+
+	private static RenderTarget createTarget(int targetWidth, int targetHeight, boolean useDepth) {
+		RenderTargetDescriptor descriptor = new RenderTargetDescriptor(targetWidth, targetHeight, useDepth, CLEAR, GpuFormat.RGBA8_UNORM);
 		RenderTarget target = descriptor.allocate();
 		descriptor.prepare(target);
 		return target;
@@ -251,7 +263,23 @@ public final class PackPipeline implements VulkirisPipeline {
 
 	@Override
 	public void captureWaterDepth(GameRenderer gameRenderer) {
-		// Packs do not receive a pre-translucent depth snapshot in format v1.
+		if (this.pack == null || !this.pack.waterDepth() || this.failed || !VulkirisConfig.get().enabled) {
+			return;
+		}
+		RenderTarget mainTarget = gameRenderer.mainRenderTarget();
+		if (mainTarget == null || mainTarget.getDepthTexture() == null || this.sceneCopy == null
+				|| this.sceneCopy.getDepthTexture() == null
+				|| this.width != Math.max(1, mainTarget.width) || this.height != Math.max(1, mainTarget.height)) {
+			return;
+		}
+		try {
+			RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(
+					mainTarget.getDepthTexture(), this.sceneCopy.getDepthTexture(),
+					0, 0, 0, 0, 0, this.width, this.height);
+			this.waterDepthCaptured = true;
+		} catch (Throwable t) {
+			VulkirisClient.LOGGER.warn("Shader pack '{}' water depth capture failed", this.packId, t);
+		}
 	}
 
 	@Override

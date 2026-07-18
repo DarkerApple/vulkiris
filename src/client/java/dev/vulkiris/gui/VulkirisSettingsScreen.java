@@ -11,25 +11,37 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Settings screen: preset selector and share buttons on top, then two pages of controls
- * ("Look" and "Effects"). Every widget writes straight into {@link VulkirisConfig}, so changes
- * are visible immediately behind the (un-blurred) screen; the file is saved on close. Hand-tuning
- * any control marks the preset as "custom".
+ * Vulkiris settings with sidebar navigation: category buttons on the left (Presets, Look,
+ * Effects, Style, Viewmodel, plus Shader Packs and Guide screens), content widgets on the
+ * right. Every widget writes straight into {@link VulkirisConfig}; the file is saved on
+ * close, and the world stays un-blurred behind the screen so changes are judged live.
  */
 public final class VulkirisSettingsScreen extends Screen {
+	private static final int SIDEBAR_X = 8;
+	private static final int SIDEBAR_WIDTH = 92;
 	private static final int WIDGET_WIDTH = 150;
 	private static final int WIDGET_HEIGHT = 20;
-	private static final int GAP_X = 8;
-	private static final int GAP_Y = 4;
+	private static final int ROW_HEIGHT = WIDGET_HEIGHT + 4;
+	private static final int TOP_Y = 28;
+
+	private static final int TAB_PRESETS = 0;
+	private static final int TAB_LOOK = 1;
+	private static final int TAB_EFFECTS = 2;
+	private static final int TAB_STYLE = 3;
+	private static final int TAB_VIEWMODEL = 4;
+	private static final String[] TAB_KEYS = {
+			"vulkiris.tab.presets", "vulkiris.tab.look", "vulkiris.tab.effects", "vulkiris.tab.style", "vulkiris.tab.viewmodel"
+	};
 
 	private final @Nullable Screen parent;
-	/** 0 = Look, 1 = Effects, 2 = Style. */
-	private int page;
+	private int tab = TAB_PRESETS;
 	private int nextIndex;
+	private int columns = 2;
 	private Component status = Component.empty();
 
 	public VulkirisSettingsScreen(@Nullable Screen parent) {
@@ -39,107 +51,135 @@ public final class VulkirisSettingsScreen extends Screen {
 
 	@Override
 	protected void init() {
-		VulkirisPresets.reloadUserPresets();
 		VulkirisConfig config = VulkirisConfig.get();
 		this.nextIndex = 0;
-		int centerX = this.width / 2;
+		int contentSpace = this.width - (SIDEBAR_X + SIDEBAR_WIDTH + 8) - 8;
+		this.columns = contentSpace >= 2 * WIDGET_WIDTH + 8 ? 2 : 1;
 
-		// Preset row: < [preset name] >
-		Button prev = this.addRenderableWidget(Button.builder(Component.literal("<"), b -> this.cyclePreset(-1)).build());
-		prev.setWidth(20);
-		prev.setX(centerX - WIDGET_WIDTH - GAP_X / 2);
-		prev.setY(this.rowY(0));
-		Button presetButton = this.addRenderableWidget(Button.builder(this.presetLabel(), b -> this.cyclePreset(1)).build());
-		presetButton.setWidth(2 * WIDGET_WIDTH + GAP_X - 48);
-		presetButton.setX(centerX - WIDGET_WIDTH - GAP_X / 2 + 24);
-		presetButton.setY(this.rowY(0));
-		Button next = this.addRenderableWidget(Button.builder(Component.literal(">"), b -> this.cyclePreset(1)).build());
-		next.setWidth(20);
-		next.setX(centerX + WIDGET_WIDTH + GAP_X / 2 - 20);
-		next.setY(this.rowY(0));
-		this.nextIndex = 2;
-
-		// Packs + share row (three buttons across the two-column span).
-		int rowSpan = 2 * WIDGET_WIDTH + GAP_X;
-		int thirdWidth = (rowSpan - 8) / 3;
-		int rowLeft = centerX - rowSpan / 2;
-		int shareY = this.rowY(1);
-		Button packsButton = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.packs"),
+		// --- Sidebar. ---
+		int sideY = TOP_Y;
+		for (int i = 0; i < TAB_KEYS.length; i++) {
+			int tabIndex = i;
+			Button tabButton = this.addRenderableWidget(Button.builder(Component.translatable(TAB_KEYS[i]), b -> {
+				this.tab = tabIndex;
+				this.rebuild();
+			}).build());
+			tabButton.setWidth(SIDEBAR_WIDTH);
+			tabButton.setX(SIDEBAR_X);
+			tabButton.setY(sideY);
+			tabButton.active = this.tab != i;
+			sideY += ROW_HEIGHT;
+		}
+		sideY += 8;
+		Button packs = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.packs"),
 				b -> this.minecraft.setScreenAndShow(new VulkirisPacksScreen(this))).build());
-		packsButton.setWidth(thirdWidth);
-		packsButton.setX(rowLeft);
-		packsButton.setY(shareY);
-		Button exportButton = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.export"), b -> {
+		packs.setWidth(SIDEBAR_WIDTH);
+		packs.setX(SIDEBAR_X);
+		packs.setY(sideY);
+		sideY += ROW_HEIGHT;
+		Button guide = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.guide"),
+				b -> this.minecraft.setScreenAndShow(new VulkirisDocsScreen(this))).build());
+		guide.setWidth(SIDEBAR_WIDTH);
+		guide.setX(SIDEBAR_X);
+		guide.setY(sideY);
+		Button done = this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> this.onClose()).build());
+		done.setWidth(SIDEBAR_WIDTH);
+		done.setX(SIDEBAR_X);
+		done.setY(this.height - 26);
+
+		// --- Content. ---
+		switch (this.tab) {
+			case TAB_PRESETS -> this.buildPresets(config);
+			case TAB_LOOK -> this.buildLook(config);
+			case TAB_EFFECTS -> this.buildEffects(config);
+			case TAB_STYLE -> this.buildStyle(config);
+			default -> this.buildViewmodel(config);
+		}
+	}
+
+	private void buildPresets(VulkirisConfig config) {
+		List<String> ids = VulkirisPresets.ids();
+		for (String id : ids) {
+			boolean active = id.equals(config.preset);
+			Component name = VulkirisPresets.displayName(id);
+			this.place(this.addRenderableWidget(Button.builder(active ? Component.literal("➤ ").append(name) : name, b -> {
+				VulkirisPresets.apply(id);
+				PipelineManager.active().clearFailure();
+				this.status = Component.translatable("vulkiris.msg.preset", VulkirisPresets.displayName(id));
+				this.rebuild();
+			}).build()));
+		}
+		if (this.nextIndex % 2 == 1) {
+			this.nextIndex++;
+		}
+		this.place(this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.export"), b -> {
 			VulkirisPresets.exportToClipboard(this.minecraft);
 			this.status = Component.translatable("vulkiris.msg.exported");
-		}).build());
-		exportButton.setWidth(thirdWidth);
-		exportButton.setX(rowLeft + thirdWidth + 4);
-		exportButton.setY(shareY);
-		Button importButton = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.import"), b -> {
+		}).build()));
+		this.place(this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.import"), b -> {
 			String id = VulkirisPresets.importFromClipboard(this.minecraft);
 			this.status = id != null
 					? Component.translatable("vulkiris.msg.imported", VulkirisPresets.displayName(id))
 					: Component.translatable("vulkiris.msg.import_failed");
 			PipelineManager.active().clearFailure();
 			this.rebuild();
-		}).build());
-		importButton.setWidth(thirdWidth);
-		importButton.setX(rowLeft + 2 * (thirdWidth + 4));
-		importButton.setY(shareY);
-		this.nextIndex = 4;
+		}).build()));
+	}
 
-		if (this.page == 0) {
-			this.addToggle(() -> onOff("vulkiris.option.effects", config.enabled), () -> {
-				config.enabled = !config.enabled;
-				PipelineManager.active().clearFailure();
-			}, false);
-			this.addCycle(() -> label("vulkiris.option.tonemap", Component.translatable("vulkiris.tonemap." + config.tonemap)), config::cycleTonemap);
-			this.addSlider("vulkiris.option.brightness", 0.25f, 2.0f, config.exposure, v -> config.exposure = v);
-			this.addSlider("vulkiris.option.tonemap_strength", 0.0f, 1.0f, config.tonemapStrength, v -> config.tonemapStrength = v);
-			this.addSlider("vulkiris.option.warmth", 0.0f, 0.25f, config.warmth, v -> config.warmth = v);
-			this.addSlider("vulkiris.option.saturation", 0.5f, 1.5f, config.saturation, v -> config.saturation = v);
-			this.addSlider("vulkiris.option.contrast", 0.8f, 1.2f, config.contrast, v -> config.contrast = v);
-			this.addSlider("vulkiris.option.vignette", 0.0f, 0.6f, config.vignette, v -> config.vignette = v);
-			this.addToggle(() -> onOff("vulkiris.option.fxaa", config.fxaa), () -> config.fxaa = !config.fxaa);
-			this.addCycle(() -> label("vulkiris.option.quality", Component.translatable("vulkiris.quality." + config.quality)), config::cycleQuality);
-			this.addSlider("vulkiris.option.film_grain", 0.0f, 0.15f, config.filmGrain, v -> config.filmGrain = v);
-		} else if (this.page == 1) {
-			this.addToggle(() -> onOff("vulkiris.option.bloom", config.bloom), () -> config.bloom = !config.bloom);
-			this.addSlider("vulkiris.option.bloom_intensity", 0.0f, 1.5f, config.bloomIntensity, v -> config.bloomIntensity = v);
-			this.addSlider("vulkiris.option.bloom_threshold", 0.0f, 1.0f, config.bloomThreshold, v -> config.bloomThreshold = v);
-			this.addSlider("vulkiris.option.light_bleed", 0.0f, 1.0f, config.lightBleed, v -> config.lightBleed = v);
-			this.addSlider("vulkiris.option.ao", 0.0f, 1.0f, config.aoStrength, v -> config.aoStrength = v);
-			this.addToggle(() -> onOff("vulkiris.option.fog", config.fog), () -> config.fog = !config.fog);
-			this.addSlider("vulkiris.option.fog_density", 0.0f, 1.0f, config.fogDensity, v -> config.fogDensity = v);
-			this.addSlider("vulkiris.option.sun_scatter", 0.0f, 2.0f, config.sunScatter, v -> config.sunScatter = v);
-			this.addSlider("vulkiris.option.god_rays", 0.0f, 1.0f, config.godRays, v -> config.godRays = v);
-			this.addSlider("vulkiris.option.sky", 0.0f, 1.5f, config.skyIntensity, v -> config.skyIntensity = v);
-			this.addToggle(() -> onOff("vulkiris.option.water", config.water), () -> config.water = !config.water);
-		} else {
-			this.addCycle(() -> label("vulkiris.option.ssr", Component.translatable(ssrKey(config.ssrSteps))), config::cycleSsr);
-			this.addSlider("vulkiris.option.sun_specular", 0.0f, 1.0f, config.sunSpecular, v -> config.sunSpecular = v);
-			this.addToggle(() -> onOff("vulkiris.option.selective_bloom", config.selectiveBloom), () -> config.selectiveBloom = !config.selectiveBloom);
-			this.addSlider("vulkiris.option.rim_light", 0.0f, 1.0f, config.rimLight, v -> config.rimLight = v);
-			this.addToggle(() -> onOff("vulkiris.option.toon", config.toon), () -> config.toon = !config.toon);
-		}
+	private void buildLook(VulkirisConfig config) {
+		this.addToggle(() -> onOff("vulkiris.option.effects", config.enabled), () -> {
+			config.enabled = !config.enabled;
+			PipelineManager.active().clearFailure();
+		}, false);
+		this.addCycle(() -> label("vulkiris.option.tonemap", Component.translatable("vulkiris.tonemap." + config.tonemap)), config::cycleTonemap);
+		this.addSlider("vulkiris.option.brightness", 0.25f, 2.0f, config.exposure, v -> config.exposure = v);
+		this.addSlider("vulkiris.option.tonemap_strength", 0.0f, 1.0f, config.tonemapStrength, v -> config.tonemapStrength = v);
+		this.addSlider("vulkiris.option.warmth", 0.0f, 0.25f, config.warmth, v -> config.warmth = v);
+		this.addSlider("vulkiris.option.saturation", 0.5f, 1.5f, config.saturation, v -> config.saturation = v);
+		this.addSlider("vulkiris.option.contrast", 0.8f, 1.2f, config.contrast, v -> config.contrast = v);
+		this.addSlider("vulkiris.option.vignette", 0.0f, 0.6f, config.vignette, v -> config.vignette = v);
+		this.addToggle(() -> onOff("vulkiris.option.fxaa", config.fxaa), () -> config.fxaa = !config.fxaa);
+		this.addCycle(() -> label("vulkiris.option.quality", Component.translatable("vulkiris.quality." + config.quality)), config::cycleQuality);
+		this.addSlider("vulkiris.option.film_grain", 0.0f, 0.15f, config.filmGrain, v -> config.filmGrain = v);
+	}
 
-		// Bottom row: page switch + done.
-		int bottomRow = this.nextIndex + (this.nextIndex % 2);
-		String nextPageKey = this.page == 0 ? "vulkiris.button.page_effects" : this.page == 1 ? "vulkiris.button.page_style" : "vulkiris.button.page_look";
-		Button pageButton = this.addRenderableWidget(Button.builder(
-				Component.translatable(nextPageKey),
-				b -> {
-					this.page = (this.page + 1) % 3;
-					this.rebuild();
-				}).build());
-		pageButton.setWidth(WIDGET_WIDTH);
-		pageButton.setX(centerX - WIDGET_WIDTH - GAP_X / 2);
-		pageButton.setY(this.rowY(bottomRow) + 8);
-		Button done = this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> this.onClose()).build());
-		done.setWidth(WIDGET_WIDTH);
-		done.setX(centerX + GAP_X / 2);
-		done.setY(this.rowY(bottomRow) + 8);
+	private void buildEffects(VulkirisConfig config) {
+		this.addSlider("vulkiris.option.sunlight", 0.0f, 1.5f, config.sunlight, v -> config.sunlight = v);
+		this.addToggle(() -> onOff("vulkiris.option.bloom", config.bloom), () -> config.bloom = !config.bloom);
+		this.addSlider("vulkiris.option.bloom_intensity", 0.0f, 1.5f, config.bloomIntensity, v -> config.bloomIntensity = v);
+		this.addSlider("vulkiris.option.bloom_threshold", 0.0f, 1.0f, config.bloomThreshold, v -> config.bloomThreshold = v);
+		this.addSlider("vulkiris.option.light_bleed", 0.0f, 1.0f, config.lightBleed, v -> config.lightBleed = v);
+		this.addSlider("vulkiris.option.ao", 0.0f, 1.0f, config.aoStrength, v -> config.aoStrength = v);
+		this.addToggle(() -> onOff("vulkiris.option.fog", config.fog), () -> config.fog = !config.fog);
+		this.addSlider("vulkiris.option.fog_density", 0.0f, 1.0f, config.fogDensity, v -> config.fogDensity = v);
+		this.addSlider("vulkiris.option.sun_scatter", 0.0f, 2.0f, config.sunScatter, v -> config.sunScatter = v);
+		this.addSlider("vulkiris.option.god_rays", 0.0f, 1.0f, config.godRays, v -> config.godRays = v);
+		this.addSlider("vulkiris.option.sky", 0.0f, 1.5f, config.skyIntensity, v -> config.skyIntensity = v);
+		this.addToggle(() -> onOff("vulkiris.option.water", config.water), () -> config.water = !config.water);
+	}
+
+	private void buildStyle(VulkirisConfig config) {
+		this.addCycle(() -> label("vulkiris.option.ssr", Component.translatable(ssrKey(config.ssrSteps))), config::cycleSsr);
+		this.addSlider("vulkiris.option.sun_specular", 0.0f, 1.0f, config.sunSpecular, v -> config.sunSpecular = v);
+		this.addToggle(() -> onOff("vulkiris.option.selective_bloom", config.selectiveBloom), () -> config.selectiveBloom = !config.selectiveBloom);
+		this.addSlider("vulkiris.option.rim_light", 0.0f, 1.0f, config.rimLight, v -> config.rimLight = v);
+		this.addToggle(() -> onOff("vulkiris.option.toon", config.toon), () -> config.toon = !config.toon);
+	}
+
+	private void buildViewmodel(VulkirisConfig config) {
+		this.addPlainSlider("vulkiris.option.vm_scale", 0.5f, 1.5f, config.vmScale, v -> config.vmScale = v);
+		this.addPlainSlider("vulkiris.option.vm_offset_x", -0.5f, 0.5f, config.vmOffsetX, v -> config.vmOffsetX = v);
+		this.addPlainSlider("vulkiris.option.vm_offset_y", -0.5f, 0.5f, config.vmOffsetY, v -> config.vmOffsetY = v);
+		this.addPlainSlider("vulkiris.option.vm_rotation", -60.0f, 60.0f, config.vmRotation, v -> config.vmRotation = v);
+		this.addPlainSlider("vulkiris.option.vm_swing", 0.0f, 1.0f, config.vmSwing, v -> config.vmSwing = v);
+		this.place(this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.vm_reset"), b -> {
+			config.vmScale = 1.0f;
+			config.vmOffsetX = 0.0f;
+			config.vmOffsetY = 0.0f;
+			config.vmRotation = 0.0f;
+			config.vmSwing = 0.0f;
+			this.rebuild();
+		}).build()));
 	}
 
 	@Override
@@ -174,20 +214,9 @@ public final class VulkirisSettingsScreen extends Screen {
 		}
 	}
 
-	private void cyclePreset(int direction) {
-		VulkirisPresets.cycle(direction);
-		PipelineManager.active().clearFailure();
-		this.status = Component.translatable("vulkiris.msg.preset", VulkirisPresets.displayName(VulkirisConfig.get().preset));
-		this.rebuild();
-	}
-
 	private void rebuild() {
 		this.clearWidgets();
 		this.init();
-	}
-
-	private Component presetLabel() {
-		return Component.translatable("vulkiris.preset.label", VulkirisPresets.displayName(VulkirisConfig.get().preset));
 	}
 
 	private static Component label(String key, Component value) {
@@ -204,10 +233,6 @@ public final class VulkirisSettingsScreen extends Screen {
 
 	private void markCustom() {
 		VulkirisConfig.get().preset = VulkirisPresets.CUSTOM;
-	}
-
-	private void addButton(Component text, Runnable onPress) {
-		this.place(this.addRenderableWidget(Button.builder(text, b -> onPress.run()).build()));
 	}
 
 	private void addToggle(Supplier<Component> text, Runnable onPress) {
@@ -231,20 +256,28 @@ public final class VulkirisSettingsScreen extends Screen {
 
 	private void addSlider(String key, float min, float max, float current, Consumer<Float> setter) {
 		double initial = (current - min) / (max - min);
-		this.place(this.addRenderableWidget(new ConfigSlider(this, key, min, max, initial, setter)));
+		this.place(this.addRenderableWidget(new ConfigSlider(this, key, min, max, initial, setter, true)));
+	}
+
+	/** A slider that does not mark the preset as custom (viewmodel settings). */
+	private void addPlainSlider(String key, float min, float max, float current, Consumer<Float> setter) {
+		double initial = (current - min) / (max - min);
+		this.place(this.addRenderableWidget(new ConfigSlider(this, key, min, max, initial, setter, false)));
 	}
 
 	private void place(AbstractWidget widget) {
 		int index = this.nextIndex++;
-		int leftX = this.width / 2 - WIDGET_WIDTH - GAP_X / 2;
-		int rightX = this.width / 2 + GAP_X / 2;
+		int contentLeft = SIDEBAR_X + SIDEBAR_WIDTH + 8;
+		int contentSpace = this.width - contentLeft - 8;
 		widget.setWidth(WIDGET_WIDTH);
-		widget.setX(index % 2 == 0 ? leftX : rightX);
-		widget.setY(this.rowY(index));
-	}
-
-	private int rowY(int index) {
-		return 28 + (index / 2) * (WIDGET_HEIGHT + GAP_Y);
+		if (this.columns == 2) {
+			int groupLeft = contentLeft + (contentSpace - (2 * WIDGET_WIDTH + 8)) / 2;
+			widget.setX(index % 2 == 0 ? groupLeft : groupLeft + WIDGET_WIDTH + 8);
+			widget.setY(TOP_Y + (index / 2) * ROW_HEIGHT);
+		} else {
+			widget.setX(contentLeft + (contentSpace - WIDGET_WIDTH) / 2);
+			widget.setY(TOP_Y + index * ROW_HEIGHT);
+		}
 	}
 
 	private static final class ConfigSlider extends AbstractSliderButton {
@@ -253,14 +286,16 @@ public final class VulkirisSettingsScreen extends Screen {
 		private final float min;
 		private final float max;
 		private final Consumer<Float> setter;
+		private final boolean marksCustom;
 
-		ConfigSlider(VulkirisSettingsScreen screen, String key, float min, float max, double initialValue, Consumer<Float> setter) {
+		ConfigSlider(VulkirisSettingsScreen screen, String key, float min, float max, double initialValue, Consumer<Float> setter, boolean marksCustom) {
 			super(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.empty(), initialValue);
 			this.screen = screen;
 			this.key = key;
 			this.min = min;
 			this.max = max;
 			this.setter = setter;
+			this.marksCustom = marksCustom;
 			this.updateMessage();
 		}
 
@@ -272,7 +307,9 @@ public final class VulkirisSettingsScreen extends Screen {
 		@Override
 		protected void applyValue() {
 			this.setter.accept(this.current());
-			this.screen.markCustom();
+			if (this.marksCustom) {
+				this.screen.markCustom();
+			}
 		}
 
 		private float current() {

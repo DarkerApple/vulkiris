@@ -27,6 +27,7 @@ public final class VulkirisPresets {
 	static {
 		builtIn("potato", c -> {
 			c.quality = 0;
+			c.sunlight = 0.0f;
 			c.bloom = false;
 			c.lightBleed = 0.0f;
 			c.aoStrength = 0.0f;
@@ -41,6 +42,7 @@ public final class VulkirisPresets {
 		});
 		builtIn("light", c -> {
 			c.quality = 0;
+			c.sunlight = 0.35f;
 			c.bloomIntensity = 0.25f;
 			c.lightBleed = 0.15f;
 			c.aoStrength = 0.3f;
@@ -57,6 +59,7 @@ public final class VulkirisPresets {
 			c.lightBleed = 0.3f;
 			c.aoStrength = 0.65f;
 			c.godRays = 0.55f;
+			c.sunlight = 0.65f;
 			c.sunSpecular = 0.3f;
 			c.skyIntensity = 0.75f;
 		});
@@ -67,6 +70,7 @@ public final class VulkirisPresets {
 			c.aoStrength = 0.7f;
 			c.godRays = 0.7f;
 			c.ssrSteps = 12;
+			c.sunlight = 0.7f;
 			c.sunSpecular = 0.35f;
 			c.skyIntensity = 0.85f;
 		});
@@ -77,6 +81,7 @@ public final class VulkirisPresets {
 			c.aoStrength = 0.75f;
 			c.godRays = 0.8f;
 			c.ssrSteps = 24;
+			c.sunlight = 0.75f;
 			c.sunSpecular = 0.4f;
 			c.skyIntensity = 1.0f;
 			c.warmth = 0.06f;
@@ -90,6 +95,7 @@ public final class VulkirisPresets {
 			c.aoStrength = 0.85f;
 			c.godRays = 1.0f;
 			c.ssrSteps = 48;
+			c.sunlight = 0.85f;
 			c.sunSpecular = 0.45f;
 			c.skyIntensity = 1.15f;
 			c.fogDensity = 0.5f;
@@ -110,6 +116,7 @@ public final class VulkirisPresets {
 			c.aoStrength = 0.9f;
 			c.godRays = 0.6f;
 			c.ssrSteps = 48;
+			c.sunlight = 0.6f;
 			c.sunSpecular = 0.5f;
 			c.skyIntensity = 0.9f;
 			c.vignette = 0.28f;

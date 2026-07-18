@@ -1,0 +1,61 @@
+§e§lVULKIRIS QUICK GUIDE§r
+
+Vulkiris is a shader platform for Minecraft's Vulkan (and OpenGL) backend. It ships with a built-in default shader and loads shader packs you make yourself.
+
+§e§lControls§r
+K — toggle effects
+P — next preset
+O — this settings screen
+Presets tab — pick a look; Export/Import shares it via clipboard.
+
+§e§lMaking your own shader pack§r
+1. Open the pack folder (Shader Packs → Open Pack Folder).
+2. Create a folder, e.g. §bmy-pack§r, containing §bvulkiris.pack.json§r and a §bshaders§r folder.
+3. Select it under Shader Packs. Edit, re-select — no restart needed.
+
+§e§lvulkiris.pack.json§r
+{
+ "name": "My Pack",
+ "author": "you",
+ "waterDepth": false,
+ "passes": [
+  { "fragment": "shaders/main.fsh" }
+ ]
+}
+Up to 8 passes run in order each frame. "scale" (0.1–1.0) shrinks a pass's output for cheap blurs; the last pass always draws the full screen.
+
+§e§lWriting a pass§r
+A pass is GLSL 330 with §bin vec2 texCoord§r and §bout vec4 fragColor§r. Available:
+§bSceneColorSampler§r — the untouched scene
+§bSceneDepthSampler§r — depth (reversed: sky is 0.0)
+§bPreviousSampler§r — previous pass output
+§bWaterDepthSampler§r — pre-water depth (set "waterDepth": true)
+§bVulkirisParams§r — time, sun, camera, matrices, fog
+
+Import the params block with:
+#moj_import <vulkiris:params.glsl>
+Import your own files with quotes: #moj_import "lib/util.glsl"
+
+§e§lMinimal example§r
+#version 330
+#moj_import <vulkiris:params.glsl>
+uniform sampler2D PreviousSampler;
+in vec2 texCoord;
+out vec4 fragColor;
+void main() {
+  vec3 c = texture(PreviousSampler, texCoord).rgb;
+  c *= 0.8 + 0.2 * sin(Screen.z * 3.0);
+  fragColor = vec4(c, 1.0);
+}
+
+§e§lTips§r
+- Write vanilla-dialect GLSL: #version 330, no layout(binding=...) — the game compiles it for both OpenGL and Vulkan.
+- Vulkan validates strictly; if a pack fails, the game log shows the compiler error and Vulkiris retries, then falls back safely.
+- Depth to view-space: unproject with InvProjection (see the built-in composite.fsh for the pattern).
+- Zip your pack folder to share it; zips load directly.
+
+§e§lIris parity status§r
+Supported today: Iris-style composite/final post passes, per-pass scale, depth + water-depth inputs, shared uniforms, zip packs, live re-select.
+Planned: multi-buffer targets, pack-defined settings in this UI, and translated terrain/entity programs (the vanilla Vulkan compiler is stricter than GL, so full Iris packs land incrementally).
+
+Full guide with tables: press "Web Guide" below.

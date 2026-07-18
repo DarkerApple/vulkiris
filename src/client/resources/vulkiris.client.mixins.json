@@ -3,6 +3,7 @@
 	"package": "dev.vulkiris.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"ItemInHandRendererMixin",
 		"LevelRendererMixin"
 	],
 	"injectors": {

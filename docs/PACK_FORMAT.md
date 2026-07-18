@@ -1,4 +1,4 @@
-# Vulkiris shader pack format (v1)
+# Vulkiris shader pack format (v1.1)
 
 Make your own shader and share it — a Vulkiris pack is a folder (or `.zip`) dropped into
 the game's `shaderpacks/` directory. Select it in game: **O → Shader Packs…**
@@ -37,6 +37,9 @@ shaderpacks/
 - `scale` — optional (default `1.0`, range `0.1–1.0`): the pass's output resolution
   relative to the screen. Great for cheap blur chains. The **last** pass always writes
   the full-resolution screen.
+- `waterDepth` — optional: when `true`, the depth buffer is snapshotted right before
+  water/translucent terrain draws and bound to every pass as `WaterDepthSampler`
+  (compare it against `SceneDepthSampler` to find water surfaces).
 
 ## Writing a pass
 
@@ -48,6 +51,7 @@ Every pass is a fragment shader over a fullscreen triangle with `in vec2 texCoor
 | `sampler2D SceneColorSampler` | The untouched scene, snapshotted before your passes ran |
 | `sampler2D SceneDepthSampler` | The live depth buffer (26.2 uses **reversed depth**: sky ≈ 0.0) |
 | `sampler2D PreviousSampler` | Output of the previous pass (first pass: the scene snapshot) |
+| `sampler2D WaterDepthSampler` | Pre-water depth snapshot (needs `"waterDepth": true`) |
 | `VulkirisParams` uniform block | Time, sun direction, camera, fog color, matrices, and more |
 
 Declare only what you use — undeclared samplers/uniforms are fine, but anything you

@@ -42,14 +42,16 @@ public final class ShaderPack implements Closeable {
 	private final @org.jspecify.annotations.Nullable FileSystem zipFs;
 	private final String name;
 	private final String author;
+	private final boolean waterDepth;
 	private final List<Pass> passes;
 
-	private ShaderPack(String id, Path root, FileSystem zipFs, String name, String author, List<Pass> passes) {
+	private ShaderPack(String id, Path root, FileSystem zipFs, String name, String author, boolean waterDepth, List<Pass> passes) {
 		this.id = id;
 		this.root = root;
 		this.zipFs = zipFs;
 		this.name = name;
 		this.author = author;
+		this.waterDepth = waterDepth;
 		this.passes = passes;
 	}
 
@@ -69,6 +71,7 @@ public final class ShaderPack implements Closeable {
 			JsonObject json = GSON.fromJson(Files.readString(root.resolve("vulkiris.pack.json")), JsonObject.class);
 			String name = json.has("name") ? json.get("name").getAsString() : id;
 			String author = json.has("author") ? json.get("author").getAsString() : "";
+			boolean waterDepth = json.has("waterDepth") && json.get("waterDepth").getAsBoolean();
 			List<Pass> passes = new ArrayList<>();
 			JsonArray passArray = json.getAsJsonArray("passes");
 			if (passArray == null || passArray.isEmpty()) {
@@ -82,7 +85,7 @@ public final class ShaderPack implements Closeable {
 			if (passes.size() > MAX_PASSES) {
 				throw new IOException("Too many passes (max " + MAX_PASSES + ")");
 			}
-			return new ShaderPack(id, root, zipFs, name, author, List.copyOf(passes));
+			return new ShaderPack(id, root, zipFs, name, author, waterDepth, List.copyOf(passes));
 		} catch (IOException | RuntimeException e) {
 			if (zipFs != null) {
 				zipFs.close();
@@ -101,6 +104,11 @@ public final class ShaderPack implements Closeable {
 
 	public String author() {
 		return this.author;
+	}
+
+	/** Whether the pack wants the pre-translucent depth snapshot bound as WaterDepthSampler. */
+	public boolean waterDepth() {
+		return this.waterDepth;
 	}
 
 	public List<Pass> passes() {
