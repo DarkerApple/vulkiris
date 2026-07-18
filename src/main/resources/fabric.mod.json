@@ -15,7 +15,13 @@
 	"entrypoints": {
 		"client": [
 			"dev.vulkiris.VulkirisClient"
+		],
+		"modmenu": [
+			"dev.vulkiris.compat.VulkirisModMenu"
 		]
+	},
+	"suggests": {
+		"modmenu": "*"
 	},
 	"mixins": [
 		{

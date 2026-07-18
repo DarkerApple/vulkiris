@@ -27,20 +27,23 @@ import java.nio.ByteOrder;
  * <pre>
  * mat4 InvProjection   (offset   0)
  * mat4 InvViewRot      (offset  64)  view-space direction -> world-space direction
- * vec4 SunDirView      (offset 128)  xyz view-space sun direction, w sun visibility
- * vec4 SunDirWorld     (offset 144)  xyz world-space sun direction, w sky intensity setting
- * vec4 UpDir           (offset 160)  xyz view-space world up,      w camera world Y
- * vec4 CameraPos       (offset 176)  xyz camera world position,    w rain factor
- * vec4 Fog             (offset 192)  rgb fog color,                w fog density setting
- * vec4 Screen          (offset 208)  xy screen size, z time seconds, w underwater flag
- * vec4 GradeA          (offset 224)  exposure, saturation, contrast, vignette strength
- * vec4 BloomParams     (offset 240)  bloom intensity, bloom threshold, sun scatter, depth-is-zero-to-one flag
- * vec4 Toggles         (offset 256)  tonemap mode, fog enabled, bloom enabled, tonemap strength
- * vec4 Extra           (offset 272)  warmth, ao strength, water enabled, unused
+ * mat4 Projection      (offset 128)  for reprojecting view-space points (SSR, god rays)
+ * vec4 SunDirView      (offset 192)  xyz view-space sun direction, w sun visibility
+ * vec4 SunDirWorld     (offset 208)  xyz world-space sun direction, w sky intensity setting
+ * vec4 UpDir           (offset 224)  xyz view-space world up,      w camera world Y
+ * vec4 CameraPos       (offset 240)  xyz camera world position,    w rain factor
+ * vec4 Fog             (offset 256)  rgb fog color,                w fog density setting
+ * vec4 Screen          (offset 272)  xy screen size, z time seconds, w underwater flag
+ * vec4 GradeA          (offset 288)  exposure, saturation, contrast, vignette strength
+ * vec4 BloomParams     (offset 304)  bloom intensity, bloom threshold, sun scatter, depth-is-zero-to-one flag
+ * vec4 Toggles         (offset 320)  tonemap mode, fog enabled, bloom enabled, tonemap strength
+ * vec4 Extra           (offset 336)  warmth, ao strength, water enabled, god rays strength
+ * vec4 Extra2          (offset 352)  sun specular, light bleed, ssr steps, unused
+ * vec4 SunScreen       (offset 368)  xy sun position in UV space, z on-screen flag, w unused
  * </pre>
  */
 public final class VulkirisUniforms {
-	private static final int SIZE_BYTES = 288;
+	private static final int SIZE_BYTES = 384;
 
 	private static final ByteBuffer data = ByteBuffer.allocateDirect(SIZE_BYTES).order(ByteOrder.nativeOrder());
 	private static final Matrix4f invProjection = new Matrix4f();
@@ -49,6 +52,7 @@ public final class VulkirisUniforms {
 	private static final Vector3f sunDirView = new Vector3f();
 	private static final Vector3f upDirView = new Vector3f();
 	private static final Vector3f fogColor = new Vector3f();
+	private static final Vector4f sunClip = new Vector4f();
 
 	private static GpuBuffer buffer;
 	private static GpuBufferSlice slice;
@@ -85,6 +89,21 @@ public final class VulkirisUniforms {
 		view.transformDirection(sunDirWorld, sunDirView).normalize();
 		view.transformDirection(0.0f, 1.0f, 0.0f, upDirView).normalize();
 
+		// Project the sun direction to screen UV for the god-ray march.
+		sunClip.set(sunDirView.x, sunDirView.y, sunDirView.z, 0.0f);
+		cameraState.projectionMatrix.transform(sunClip);
+		float sunU = 0.0f;
+		float sunV = 0.0f;
+		float sunOnScreen = 0.0f;
+		if (sunClip.w > 1.0e-4f) {
+			sunU = sunClip.x / sunClip.w * 0.5f + 0.5f;
+			sunV = sunClip.y / sunClip.w * 0.5f + 0.5f;
+			// Allow the sun to sit a bit outside the viewport; the shafts still read correctly.
+			if (sunU > -0.4f && sunU < 1.4f && sunV > -0.4f && sunV < 1.4f) {
+				sunOnScreen = 1.0f;
+			}
+		}
+
 		unpackRgb(sky.skyColor, fogColor);
 		if (vanillaFogColor != null) {
 			// Blend toward the fog color the game actually used this frame (biome/weather aware).
@@ -97,12 +116,15 @@ public final class VulkirisUniforms {
 		boolean depthZeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
 		boolean waterOn = config.water && waterDepthValid && !underwater;
 		float aoStrength = bloomChainRuns ? config.aoStrength : 0.0f;
+		float lightBleed = config.bloom ? config.lightBleed : 0.0f;
 
 		data.clear();
 		invProjection.get(data);
 		data.position(64);
 		invViewRot.get(data);
 		data.position(128);
+		cameraState.projectionMatrix.get(data);
+		data.position(192);
 		putVec4(sunDirView.x, sunDirView.y, sunDirView.z, sunVisibility);
 		putVec4(sunDirWorld.x, sunDirWorld.y, sunDirWorld.z, config.skyIntensity);
 		putVec4(upDirView.x, upDirView.y, upDirView.z, (float) cameraState.pos.y);
@@ -112,7 +134,9 @@ public final class VulkirisUniforms {
 		putVec4(config.exposure, config.saturation, config.contrast, config.vignette);
 		putVec4(config.bloomIntensity, config.bloomThreshold, config.sunScatter, depthZeroToOne ? 1.0f : 0.0f);
 		putVec4(config.tonemapMode(), config.fog ? 1.0f : 0.0f, config.bloom ? 1.0f : 0.0f, config.tonemapStrength);
-		putVec4(config.warmth, aoStrength, waterOn ? 1.0f : 0.0f, 0.0f);
+		putVec4(config.warmth, aoStrength, waterOn ? 1.0f : 0.0f, config.godRays);
+		putVec4(config.sunSpecular, lightBleed, config.ssrSteps, 0.0f);
+		putVec4(sunU, sunV, sunOnScreen, 0.0f);
 		data.rewind();
 	}
 

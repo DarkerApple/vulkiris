@@ -12,10 +12,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public final class VulkirisConfig {
-	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static VulkirisConfig instance = new VulkirisConfig();
 
 	public boolean enabled = true;
+	/** Id of the last applied preset ("custom" once anything is hand-tuned). */
+	public String preset = "medium";
 
 	/** One of: "aces", "filmic", "off". */
 	public String tonemap = "aces";
@@ -30,6 +32,8 @@ public final class VulkirisConfig {
 	public boolean bloom = true;
 	public float bloomIntensity = 0.32f;
 	public float bloomThreshold = 0.72f;
+	/** Colored light bleed: bloom glow filling nearby dark areas (torch glow feel). */
+	public float lightBleed = 0.25f;
 
 	public boolean fog = true;
 	public float fogDensity = 0.45f;
@@ -38,11 +42,20 @@ public final class VulkirisConfig {
 	/** Sunset/sunrise gradients and day/night sky grading on sky, clouds, and far terrain. */
 	public float skyIntensity = 0.6f;
 
+	/** Screen-space god rays / sun shafts; 0 disables. */
+	public float godRays = 0.3f;
+
 	/** Screen-space ambient occlusion strength; 0 disables (shares the bloom blur, nearly free). */
 	public float aoStrength = 0.55f;
 
 	/** Water surface shading: sun glint, depth absorption, fresnel sky tint. */
 	public boolean water = true;
+
+	/** Screen-space reflection ray-march steps on water: 0 (off), 12 (low), 24 (high). */
+	public int ssrSteps = 0;
+
+	/** Depth-normal sun specular on all surfaces ("PBR-ish" gloss); 0 disables. */
+	public float sunSpecular = 0.2f;
 
 	/** 0 disables the vignette. */
 	public float vignette = 0.18f;
@@ -82,6 +95,32 @@ public final class VulkirisConfig {
 		}
 	}
 
+	/** Copies every visual setting (not {@link #enabled}, not {@link #preset}) from another config. */
+	public void copyVisualsFrom(VulkirisConfig other) {
+		tonemap = other.tonemap;
+		tonemapStrength = other.tonemapStrength;
+		exposure = other.exposure;
+		saturation = other.saturation;
+		contrast = other.contrast;
+		warmth = other.warmth;
+		bloom = other.bloom;
+		bloomIntensity = other.bloomIntensity;
+		bloomThreshold = other.bloomThreshold;
+		lightBleed = other.lightBleed;
+		fog = other.fog;
+		fogDensity = other.fogDensity;
+		sunScatter = other.sunScatter;
+		skyIntensity = other.skyIntensity;
+		godRays = other.godRays;
+		aoStrength = other.aoStrength;
+		water = other.water;
+		ssrSteps = other.ssrSteps;
+		sunSpecular = other.sunSpecular;
+		vignette = other.vignette;
+		fxaa = other.fxaa;
+		sanitized();
+	}
+
 	public int tonemapMode() {
 		return switch (tonemap == null ? "" : tonemap.toLowerCase()) {
 			case "aces" -> 1;
@@ -98,7 +137,18 @@ public final class VulkirisConfig {
 		};
 	}
 
-	private VulkirisConfig sanitized() {
+	public void cycleSsr() {
+		ssrSteps = switch (ssrSteps) {
+			case 0 -> 12;
+			case 12 -> 24;
+			default -> 0;
+		};
+	}
+
+	public VulkirisConfig sanitized() {
+		if (preset == null || preset.isBlank()) {
+			preset = "custom";
+		}
 		if (tonemap == null || tonemap.isBlank()) {
 			tonemap = "aces";
 		}
@@ -109,10 +159,14 @@ public final class VulkirisConfig {
 		warmth = clamp(warmth, 0.0f, 0.25f);
 		bloomIntensity = clamp(bloomIntensity, 0.0f, 2.0f);
 		bloomThreshold = clamp(bloomThreshold, 0.0f, 1.0f);
+		lightBleed = clamp(lightBleed, 0.0f, 1.0f);
 		fogDensity = clamp(fogDensity, 0.0f, 1.0f);
 		sunScatter = clamp(sunScatter, 0.0f, 2.0f);
 		skyIntensity = clamp(skyIntensity, 0.0f, 1.5f);
+		godRays = clamp(godRays, 0.0f, 1.0f);
 		aoStrength = clamp(aoStrength, 0.0f, 1.0f);
+		ssrSteps = ssrSteps >= 24 ? 24 : ssrSteps >= 12 ? 12 : 0;
+		sunSpecular = clamp(sunSpecular, 0.0f, 1.0f);
 		vignette = clamp(vignette, 0.0f, 1.0f);
 		return this;
 	}
@@ -123,5 +177,9 @@ public final class VulkirisConfig {
 
 	private static Path configPath() {
 		return FabricLoader.getInstance().getConfigDir().resolve("vulkiris.json");
+	}
+
+	public static Path presetsDir() {
+		return FabricLoader.getInstance().getConfigDir().resolve("vulkiris-presets");
 	}
 }
