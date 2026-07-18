@@ -19,17 +19,30 @@ public final class VulkirisConfig {
 
 	/** One of: "aces", "filmic", "off". */
 	public String tonemap = "aces";
-	public float exposure = 1.0f;
-	public float saturation = 1.08f;
+	/** How strongly the tonemap curve is applied (0 = untouched image). */
+	public float tonemapStrength = 0.7f;
+	public float exposure = 0.82f;
+	public float saturation = 1.06f;
 	public float contrast = 1.02f;
+	/** Warm white balance shift; 0 is neutral. */
+	public float warmth = 0.05f;
 
 	public boolean bloom = true;
-	public float bloomIntensity = 0.35f;
+	public float bloomIntensity = 0.32f;
 	public float bloomThreshold = 0.72f;
 
 	public boolean fog = true;
 	public float fogDensity = 0.45f;
 	public float sunScatter = 0.6f;
+
+	/** Sunset/sunrise gradients and day/night sky grading on sky, clouds, and far terrain. */
+	public float skyIntensity = 0.6f;
+
+	/** Screen-space ambient occlusion strength; 0 disables (shares the bloom blur, nearly free). */
+	public float aoStrength = 0.55f;
+
+	/** Water surface shading: sun glint, depth absorption, fresnel sky tint. */
+	public boolean water = true;
 
 	/** 0 disables the vignette. */
 	public float vignette = 0.18f;
@@ -77,14 +90,29 @@ public final class VulkirisConfig {
 		};
 	}
 
+	public void cycleTonemap() {
+		tonemap = switch (tonemapMode()) {
+			case 1 -> "filmic";
+			case 2 -> "off";
+			default -> "aces";
+		};
+	}
+
 	private VulkirisConfig sanitized() {
+		if (tonemap == null || tonemap.isBlank()) {
+			tonemap = "aces";
+		}
+		tonemapStrength = clamp(tonemapStrength, 0.0f, 1.0f);
 		exposure = clamp(exposure, 0.25f, 4.0f);
 		saturation = clamp(saturation, 0.0f, 2.0f);
 		contrast = clamp(contrast, 0.5f, 1.5f);
+		warmth = clamp(warmth, 0.0f, 0.25f);
 		bloomIntensity = clamp(bloomIntensity, 0.0f, 2.0f);
 		bloomThreshold = clamp(bloomThreshold, 0.0f, 1.0f);
 		fogDensity = clamp(fogDensity, 0.0f, 1.0f);
 		sunScatter = clamp(sunScatter, 0.0f, 2.0f);
+		skyIntensity = clamp(skyIntensity, 0.0f, 1.5f);
+		aoStrength = clamp(aoStrength, 0.0f, 1.0f);
 		vignette = clamp(vignette, 0.0f, 1.0f);
 		return this;
 	}

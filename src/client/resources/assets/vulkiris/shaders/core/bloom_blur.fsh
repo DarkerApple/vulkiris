@@ -15,13 +15,14 @@ void main() {
 #endif
 
     // 9-tap separable Gaussian at half resolution, slightly widened for a softer halo.
+    // Blurs rgb (bloom) and alpha (ambient occlusion) together.
     float weights[5] = float[](0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
-    vec3 color = texture(SceneColorSampler, texCoord).rgb * weights[0];
+    vec4 color = texture(SceneColorSampler, texCoord) * weights[0];
     for (int i = 1; i < 5; i++) {
         vec2 offset = direction * (float(i) * 1.5);
-        color += texture(SceneColorSampler, texCoord + offset).rgb * weights[i];
-        color += texture(SceneColorSampler, texCoord - offset).rgb * weights[i];
+        color += texture(SceneColorSampler, texCoord + offset) * weights[i];
+        color += texture(SceneColorSampler, texCoord - offset) * weights[i];
     }
 
-    fragColor = vec4(color, 1.0);
+    fragColor = color;
 }

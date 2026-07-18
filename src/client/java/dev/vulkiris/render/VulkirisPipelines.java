@@ -35,6 +35,7 @@ public final class VulkirisPipelines {
 				.withBindGroupLayout(BindGroupLayout.builder()
 						.withSampler("SceneColorSampler")
 						.withSampler("SceneDepthSampler")
+						.withSampler("WaterDepthSampler")
 						.withSampler("BloomSampler")
 						.withUniform("VulkirisParams", UniformType.UNIFORM_BUFFER)
 						.build())
@@ -45,6 +46,7 @@ public final class VulkirisPipelines {
 				.withFragmentShader(id("core/bloom_prefilter"))
 				.withBindGroupLayout(BindGroupLayout.builder()
 						.withSampler("SceneColorSampler")
+						.withSampler("SceneDepthSampler")
 						.withUniform("VulkirisParams", UniformType.UNIFORM_BUFFER)
 						.build())
 				.build();
