@@ -72,7 +72,7 @@ public final class VulkirisClient implements ClientModInitializer {
 			feedback(client, Component.translatable(config.enabled ? "vulkiris.msg.enabled" : "vulkiris.msg.disabled"));
 		}
 		while (settingsKey.consumeClick()) {
-			if (client.screen == null) {
+			if (client.gui.screen() == null) {
 				client.setScreenAndShow(new VulkirisSettingsScreen(null));
 			}
 		}
