@@ -143,8 +143,13 @@ public final class VulkirisRenderer {
 		VulkirisUniforms.prepare(config, cameraState, levelRenderState, modelViewMatrix, fogColor,
 				deltaTracker, mainTarget, waterDepthValid, bloomChainRuns);
 
+		// NEVER call encoder.submit() here: on the Vulkan backend each submit blocks on the
+		// submission two before it, and vanilla already submits once per frame right before
+		// present. An extra submit halves the frames in flight and chains the render loop to
+		// the swapchain cadence — capping FPS at the display refresh rate on macOS/MoltenVK.
+		// Our passes are recorded into the frame's command buffer and flushed by vanilla.
 		CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
-		try {
+		{
 			GpuBufferSlice params = VulkirisUniforms.upload(encoder);
 
 			// Snapshot the scene color; depth is sampled from the live buffer (no pass writes it).
@@ -192,8 +197,6 @@ public final class VulkirisRenderer {
 				fullscreenPass(encoder, VulkirisPipelines.fxaa, mainTarget.getColorTextureView(), pass ->
 						pass.bindTexture("SceneColorSampler", TARGETS.sceneCopy.getColorTextureView(), linearSampler));
 			}
-		} finally {
-			encoder.submit();
 		}
 	}
 

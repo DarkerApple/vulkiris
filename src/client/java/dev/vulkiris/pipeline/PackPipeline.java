@@ -143,8 +143,11 @@ public final class PackPipeline implements VulkirisPipeline {
 		boolean waterDepthValid = this.waterDepthCaptured;
 		this.waterDepthCaptured = false;
 
+		// No encoder.submit() here — vanilla submits once per frame before present, and an
+		// extra submit blocks on in-flight work, capping FPS at the display refresh rate
+		// on the Vulkan backend (see VulkirisRenderer.renderChain).
 		CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
-		try {
+		{
 			GpuBufferSlice params = VulkirisUniforms.upload(encoder);
 			GpuBufferSlice packSettings = this.uploadSettings(encoder);
 			encoder.copyTextureToTexture(
@@ -177,8 +180,6 @@ public final class PackPipeline implements VulkirisPipeline {
 				}
 				previous = output;
 			}
-		} finally {
-			encoder.submit();
 		}
 	}
 
