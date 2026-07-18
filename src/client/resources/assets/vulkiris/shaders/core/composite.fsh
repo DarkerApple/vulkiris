@@ -109,28 +109,46 @@ void main() {
         color += vec3(1.0, 0.93, 0.8) * spec * Extra2.x * 0.35 * (0.35 + 0.65 * baseLuma);
     }
 
-    // --- Silhouette edge factor, shared by rim lighting and the toon outline. ---
+    // --- Block-outline edge factor, shared by rim lighting and the toon outline. ---
+    // Two detectors over the same four depth taps: a silhouette test (background well
+    // behind this surface) and a view-distance Laplacian, which stays ~0 across flat
+    // faces but spikes at block edges, corners, and creases — the per-block outline.
     float silhouette = 0.0;
     if ((Style.y > 0.001 || Style.z > 0.5) && !isSky) {
         vec2 texel = 2.0 / Screen.xy;
-        float behind = 0.0;
-        for (int i = 0; i < 4; i++) {
-            vec2 offset = i == 0 ? vec2(texel.x, 0.0)
-                    : i == 1 ? vec2(-texel.x, 0.0)
-                    : i == 2 ? vec2(0.0, texel.y)
-                    : vec2(0.0, -texel.y);
-            float d = textureLod(SceneDepthSampler, clamp(texCoord + offset, vec2(0.0), vec2(1.0)), 0.0).r;
-            float neighborDist = d < 1.0e-6 ? 4000.0 : length(viewPosAt(texCoord + offset, d));
-            behind = max(behind, neighborDist - viewDist);
+        float distLeft;
+        float distRight;
+        float distUp;
+        float distDown;
+        {
+            float d = textureLod(SceneDepthSampler, clamp(texCoord + vec2(-texel.x, 0.0), vec2(0.0), vec2(1.0)), 0.0).r;
+            distLeft = d < 1.0e-6 ? 4000.0 : length(viewPosAt(texCoord + vec2(-texel.x, 0.0), d));
+            d = textureLod(SceneDepthSampler, clamp(texCoord + vec2(texel.x, 0.0), vec2(0.0), vec2(1.0)), 0.0).r;
+            distRight = d < 1.0e-6 ? 4000.0 : length(viewPosAt(texCoord + vec2(texel.x, 0.0), d));
+            d = textureLod(SceneDepthSampler, clamp(texCoord + vec2(0.0, -texel.y), vec2(0.0), vec2(1.0)), 0.0).r;
+            distUp = d < 1.0e-6 ? 4000.0 : length(viewPosAt(texCoord + vec2(0.0, -texel.y), d));
+            d = textureLod(SceneDepthSampler, clamp(texCoord + vec2(0.0, texel.y), vec2(0.0), vec2(1.0)), 0.0).r;
+            distDown = d < 1.0e-6 ? 4000.0 : length(viewPosAt(texCoord + vec2(0.0, texel.y), d));
         }
-        // An edge counts when the background sits well behind this surface.
-        silhouette = smoothstep(0.6, 3.5, behind);
+
+        float behind = max(max(distLeft, distRight), max(distUp, distDown)) - viewDist;
+        float bigSilhouette = smoothstep(0.6, 3.5, behind);
+
+        float crease = max(
+                abs(distLeft + distRight - 2.0 * viewDist),
+                abs(distUp + distDown - 2.0 * viewDist));
+        float creaseThreshold = 0.02 + 0.014 * viewDist;
+        float creaseEdge = smoothstep(creaseThreshold, creaseThreshold * 2.5, crease);
+
+        // Fade block outlines out with distance so far terrain stays clean.
+        float nearFade = smoothstep(150.0, 60.0, viewDist);
+        silhouette = clamp(max(bigSilhouette, creaseEdge * nearFade), 0.0, 1.0);
     }
 
-    // --- Shine-style rim lighting: bright silhouette edges catching sky/sun light. ---
+    // --- Shine-style rim lighting: crisp bright outlines around blocks. ---
     if (Style.y > 0.001 && silhouette > 0.001) {
-        vec3 rimColor = mix(Fog.rgb * 1.15, vec3(1.0, 0.9, 0.72), SunDirView.w * 0.5);
-        color += rimColor * silhouette * Style.y * (0.25 + 0.3 * baseLuma);
+        vec3 rimColor = mix(Fog.rgb * 1.3, vec3(1.0, 0.95, 0.8), SunDirView.w * 0.6);
+        color += rimColor * silhouette * Style.y * (0.35 + 0.25 * baseLuma);
     }
 
     // --- Water surface shading: depth absorption, animated sun glint, fresnel/SSR reflections. ---

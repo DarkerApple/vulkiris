@@ -28,6 +28,7 @@ public final class VulkirisPresets {
 		builtIn("potato", c -> {
 			c.quality = 0;
 			c.sunlight = 0.0f;
+			c.rimLight = 0.0f;
 			c.bloom = false;
 			c.lightBleed = 0.0f;
 			c.aoStrength = 0.0f;
@@ -43,6 +44,7 @@ public final class VulkirisPresets {
 		builtIn("light", c -> {
 			c.quality = 0;
 			c.sunlight = 0.35f;
+			c.rimLight = 0.15f;
 			c.bloomIntensity = 0.25f;
 			c.lightBleed = 0.15f;
 			c.aoStrength = 0.3f;
@@ -60,6 +62,7 @@ public final class VulkirisPresets {
 			c.aoStrength = 0.65f;
 			c.godRays = 0.55f;
 			c.sunlight = 0.65f;
+			c.rimLight = 0.3f;
 			c.sunSpecular = 0.3f;
 			c.skyIntensity = 0.75f;
 		});
@@ -71,6 +74,7 @@ public final class VulkirisPresets {
 			c.godRays = 0.7f;
 			c.ssrSteps = 12;
 			c.sunlight = 0.7f;
+			c.rimLight = 0.3f;
 			c.sunSpecular = 0.35f;
 			c.skyIntensity = 0.85f;
 		});
@@ -85,7 +89,7 @@ public final class VulkirisPresets {
 			c.sunSpecular = 0.4f;
 			c.skyIntensity = 1.0f;
 			c.warmth = 0.06f;
-			c.rimLight = 0.2f;
+			c.rimLight = 0.35f;
 			c.fxaa = true;
 		});
 		builtIn("extreme", c -> {
@@ -99,7 +103,7 @@ public final class VulkirisPresets {
 			c.sunSpecular = 0.45f;
 			c.skyIntensity = 1.15f;
 			c.fogDensity = 0.5f;
-			c.rimLight = 0.3f;
+			c.rimLight = 0.4f;
 			c.fxaa = true;
 		});
 		builtIn("reallife", c -> {
@@ -120,6 +124,7 @@ public final class VulkirisPresets {
 			c.sunSpecular = 0.5f;
 			c.skyIntensity = 0.9f;
 			c.vignette = 0.28f;
+			c.rimLight = 0.0f;
 			c.filmGrain = 0.045f;
 			c.fxaa = true;
 		});

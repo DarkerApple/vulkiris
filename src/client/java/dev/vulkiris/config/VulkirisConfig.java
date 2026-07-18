@@ -42,8 +42,8 @@ public final class VulkirisConfig {
 	 */
 	public boolean selectiveBloom = true;
 
-	/** Shine-style rim lighting: bright silhouette edges on geometry; 0 disables. */
-	public float rimLight = 0.0f;
+	/** Shine-style rim lighting: crisp bright outlines around blocks; 0 disables. */
+	public float rimLight = 0.25f;
 
 	/** Cel-shaded look: quantized lighting bands plus dark depth-edge outlines. */
 	public boolean toon = false;
