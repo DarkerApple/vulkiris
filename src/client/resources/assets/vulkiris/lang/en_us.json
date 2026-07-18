@@ -59,5 +59,11 @@
 	"vulkiris.msg.egg.1": "§9SANNABI§r — the city remembers.",
 	"vulkiris.msg.egg.2": "§aThere is no spoon.",
 	"vulkiris.msg.egg.3": "§7He is watching...",
-	"vulkiris.msg.egg.off": "Back to reality."
+	"vulkiris.msg.egg.off": "Back to reality.",
+	"vulkiris.option.quality": "Quality",
+	"vulkiris.quality.0": "Lite",
+	"vulkiris.quality.1": "High",
+	"vulkiris.quality.2": "Ultra",
+	"vulkiris.option.film_grain": "Film Grain",
+	"vulkiris.ssr.ultra": "Ultra"
 }

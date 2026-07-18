@@ -40,10 +40,11 @@ import java.nio.ByteOrder;
  * vec4 Extra           (offset 336)  warmth, ao strength, water enabled, god rays strength
  * vec4 Extra2          (offset 352)  sun specular, light bleed, ssr steps, easter-egg mode
  * vec4 SunScreen       (offset 368)  xy sun position in UV space, z on-screen flag, w easter-egg strength
+ * vec4 Quality         (offset 384)  ao taps, god-ray taps, volumetric fog steps, film grain
  * </pre>
  */
 public final class VulkirisUniforms {
-	private static final int SIZE_BYTES = 384;
+	private static final int SIZE_BYTES = 400;
 
 	private static final ByteBuffer data = ByteBuffer.allocateDirect(SIZE_BYTES).order(ByteOrder.nativeOrder());
 	private static final Matrix4f invProjection = new Matrix4f();
@@ -138,6 +139,10 @@ public final class VulkirisUniforms {
 		putVec4(config.warmth, aoStrength, waterOn ? 1.0f : 0.0f, config.godRays);
 		putVec4(config.sunSpecular, lightBleed, config.ssrSteps, VulkirisEggs.mode());
 		putVec4(sunU, sunV, sunOnScreen, VulkirisEggs.strength());
+		int aoTaps = config.quality >= 2 ? 24 : config.quality == 1 ? 16 : 8;
+		int rayTaps = config.quality >= 2 ? 48 : config.quality == 1 ? 28 : 14;
+		int fogSteps = config.quality >= 2 ? 20 : config.quality == 1 ? 12 : 0;
+		putVec4(aoTaps, rayTaps, fogSteps, config.filmGrain);
 		data.rewind();
 	}
 

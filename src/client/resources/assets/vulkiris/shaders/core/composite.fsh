@@ -35,6 +35,27 @@ vec3 viewPosAt(vec2 uv, float depth) {
     return abs(viewH.w) > 1.0e-7 ? viewH.xyz / viewH.w : vec3(0.0);
 }
 
+float hash2(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float hash3(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+
+// Trilinear value noise for the volumetric fog wisps.
+float valueNoise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(mix(hash3(i), hash3(i + vec3(1.0, 0.0, 0.0)), f.x),
+            mix(hash3(i + vec3(0.0, 1.0, 0.0)), hash3(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+        mix(mix(hash3(i + vec3(0.0, 0.0, 1.0)), hash3(i + vec3(1.0, 0.0, 1.0)), f.x),
+            mix(hash3(i + vec3(0.0, 1.0, 1.0)), hash3(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+        f.z);
+}
+
 void main() {
     vec3 color = texture(SceneColorSampler, texCoord).rgb;
     float baseLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -94,10 +115,18 @@ void main() {
             if (upFacing > 0.0 && thickness > 0.05) {
                 vec3 worldPos = CameraPos.xyz + mat3(InvViewRot) * viewPos;
 
-                // Two-octave procedural wave normal in world space.
+                // Procedural wave normal in world space; higher quality tiers add detail octaves.
                 vec2 wave = vec2(
                     sin(worldPos.x * 0.9 + time * 1.7) + 0.5 * sin(worldPos.x * 2.3 - time * 2.6 + worldPos.z * 0.8),
                     sin(worldPos.z * 1.1 + time * 1.4) + 0.5 * sin(worldPos.z * 2.7 + time * 2.2 + worldPos.x * 0.6));
+                if (Quality.x > 12.0) {
+                    wave += 0.3 * vec2(
+                        sin(worldPos.x * 5.1 + worldPos.z * 2.9 + time * 3.4),
+                        sin(worldPos.z * 5.7 - worldPos.x * 2.3 + time * 3.1));
+                    wave += 0.15 * vec2(
+                        sin(worldPos.x * 11.0 - worldPos.z * 6.5 - time * 4.4),
+                        sin(worldPos.z * 12.3 + worldPos.x * 7.1 + time * 4.9));
+                }
                 vec3 waveWorld = normalize(vec3(wave.x * 0.06, 1.0, wave.y * 0.06));
                 mat3 viewRot = transpose(mat3(InvViewRot));
                 vec3 waterNormal = normalize(mix(faceNormal, viewRot * waveWorld, 0.75 * upFacing));
@@ -112,14 +141,18 @@ void main() {
                 vec3 reflected = reflect(viewDir, waterNormal);
                 int ssrSteps = int(Extra2.z + 0.5);
                 if (ssrSteps > 0 && reflected.z < -0.02) {
+                    // Finer steps at higher counts; exponential growth keeps the reach similar.
                     vec3 rayPos = viewPos + waterNormal * 0.1;
-                    float stepSize = 0.5;
-                    for (int i = 0; i < 24; i++) {
+                    float stepSize = ssrSteps >= 24 ? 0.3 : 0.5;
+                    float growth = ssrSteps >= 48 ? 1.10 : ssrSteps >= 24 ? 1.16 : 1.22;
+                    float lastStep = stepSize;
+                    for (int i = 0; i < 48; i++) {
                         if (i >= ssrSteps) {
                             break;
                         }
                         rayPos += reflected * stepSize;
-                        stepSize *= 1.22;
+                        lastStep = stepSize;
+                        stepSize *= growth;
                         vec4 clip = Projection * vec4(rayPos, 1.0);
                         if (clip.w < 1.0e-4) {
                             break;
@@ -134,8 +167,27 @@ void main() {
                         }
                         vec3 samplePos = viewPosAt(uv, sampleDepth);
                         float dz = samplePos.z - rayPos.z;
-                        if (dz > 0.05 && dz < stepSize * 4.0) {
-                            reflectColor = textureLod(SceneColorSampler, uv, 0.0).rgb;
+                        if (dz > 0.05 && dz < lastStep * 4.0) {
+                            vec2 hitUv = uv;
+                            if (ssrSteps >= 24) {
+                                // Binary-search refinement for crisper contact points.
+                                vec3 lo = rayPos - reflected * lastStep;
+                                vec3 hi = rayPos;
+                                for (int r = 0; r < 4; r++) {
+                                    vec3 mid = (lo + hi) * 0.5;
+                                    vec4 midClip = Projection * vec4(mid, 1.0);
+                                    vec2 midUv = midClip.xy / max(midClip.w, 1.0e-4) * 0.5 + 0.5;
+                                    float midDepth = textureLod(SceneDepthSampler, clamp(midUv, vec2(0.0), vec2(1.0)), 0.0).r;
+                                    vec3 midSample = viewPosAt(midUv, midDepth);
+                                    if (midDepth > 1.0e-6 && midSample.z - mid.z > 0.05) {
+                                        hi = mid;
+                                        hitUv = midUv;
+                                    } else {
+                                        lo = mid;
+                                    }
+                                }
+                            }
+                            reflectColor = textureLod(SceneColorSampler, clamp(hitUv, vec2(0.0), vec2(1.0)), 0.0).rgb;
                             reflectStrength = 0.7;
                             break;
                         }
@@ -174,33 +226,67 @@ void main() {
         vec3 underwaterTint = Fog.rgb * vec3(0.75, 0.95, 1.1);
         fogTint = mix(fogTint, underwaterTint, underwater);
 
+        // Volumetric fog below replaces part of this; thin it out so they don't double up.
+        if (Quality.z > 0.5) {
+            fogAmount *= 0.6;
+        }
         color = mix(color, fogTint, fogAmount);
+    }
+
+    // --- Volumetric noise fog: animated ground mist with sun in-scattering (heavy tiers). ---
+    if (Quality.z > 0.5 && Toggles.y > 0.5 && underwater < 0.5 && !isSky) {
+        int fogSteps = int(Quality.z + 0.5);
+        float maxDist = min(viewDist, 96.0);
+        float stepLen = maxDist / float(fogSteps);
+        vec3 worldStep = normalize(mat3(InvViewRot) * viewDir) * stepLen;
+        vec3 samplePoint = CameraPos.xyz + worldStep * (0.3 + 0.7 * hash2(gl_FragCoord.xy));
+        float accum = 0.0;
+        for (int i = 0; i < 20; i++) {
+            if (i >= fogSteps) {
+                break;
+            }
+            float heightFade = exp(-max(samplePoint.y - 62.0, 0.0) / 40.0);
+            float wisp = valueNoise(samplePoint * 0.045 + vec3(time * 0.06, time * 0.015, time * 0.04));
+            accum += heightFade * (0.35 + 1.1 * wisp * wisp);
+            samplePoint += worldStep;
+        }
+        float volFog = 1.0 - exp(-accum * stepLen * 0.010 * Fog.w * (1.0 + rain));
+        volFog = clamp(volFog, 0.0, 0.55);
+        float sunPhase = pow(max(dot(viewDir, SunDirView.xyz), 0.0), 4.0) * SunDirView.w;
+        vec3 volColor = mix(Fog.rgb, Fog.rgb * vec3(1.35, 1.08, 0.8), sunPhase);
+        color = mix(color, volColor, volFog * 0.8);
     }
 
     // --- Screen-space god rays: march toward the sun accumulating sky visibility. ---
     if (Extra.w > 0.001 && SunScreen.z > 0.5 && SunDirView.w > 0.01 && underwater < 0.5) {
-        vec2 rayStep = (SunScreen.xy - texCoord) / 14.0;
+        int rayTaps = int(Quality.y + 0.5);
+        vec2 rayStep = (SunScreen.xy - texCoord) / float(rayTaps);
         // Cap the march length so shafts stay soft on ultrawide angles.
         float stepLength = length(rayStep);
-        if (stepLength > 0.06) {
-            rayStep *= 0.06 / stepLength;
+        float maxStep = 0.85 / float(rayTaps);
+        if (stepLength > maxStep) {
+            rayStep *= maxStep / stepLength;
         }
         float illumination = 0.0;
         float decay = 1.0;
-        vec2 uv = texCoord;
-        for (int i = 0; i < 14; i++) {
+        // Jittered start hides banding at low tap counts.
+        vec2 uv = texCoord + rayStep * hash2(gl_FragCoord.xy);
+        for (int i = 0; i < 48; i++) {
+            if (i >= rayTaps) {
+                break;
+            }
             uv += rayStep;
             if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
                 break;
             }
             float d = textureLod(SceneDepthSampler, uv, 0.0).r;
             illumination += (d < 1.0e-6 ? 1.0 : 0.0) * decay;
-            decay *= 0.86;
+            decay *= 1.0 - 2.0 / float(rayTaps);
         }
-        illumination /= 14.0;
+        illumination /= float(rayTaps) * 0.5;
         float toSun = max(dot(viewDir, SunDirView.xyz), 0.0);
         vec3 shaftColor = Fog.rgb * vec3(1.35, 1.05, 0.75);
-        color += shaftColor * illumination * pow(toSun, 3.0) * Extra.w * SunDirView.w * 0.5;
+        color += shaftColor * clamp(illumination, 0.0, 1.0) * pow(toSun, 3.0) * Extra.w * SunDirView.w * 0.5;
     }
 
     // --- Sky, sunset, and cloud grading (clouds write depth, so far pixels catch it too). ---
@@ -298,6 +384,12 @@ void main() {
     vec2 fromCenter = texCoord - 0.5;
     float vignette = 1.0 - GradeA.w * smoothstep(0.25, 0.68, dot(fromCenter, fromCenter));
     color *= vignette;
+
+    // --- Film grain (Real-Life mode and custom configs). ---
+    if (Quality.w > 0.001) {
+        float grain = hash2(gl_FragCoord.xy + vec2(fract(time) * 251.0, fract(time * 0.61) * 379.0)) - 0.5;
+        color += grain * Quality.w * (0.4 + 0.6 * (1.0 - dot(color, vec3(0.333))));
+    }
 
     fragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
 }

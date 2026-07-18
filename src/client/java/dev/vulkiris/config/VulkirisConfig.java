@@ -51,8 +51,18 @@ public final class VulkirisConfig {
 	/** Water surface shading: sun glint, depth absorption, fresnel sky tint. */
 	public boolean water = true;
 
-	/** Screen-space reflection ray-march steps on water: 0 (off), 12 (low), 24 (high). */
+	/** Screen-space reflection ray-march steps on water: 0 (off), 12 (low), 24 (high), 48 (ultra). */
 	public int ssrSteps = 0;
+
+	/**
+	 * Effect quality tier: 0 lite, 1 high, 2 ultra. Scales AO/god-ray taps, enables
+	 * volumetric noise fog, wide double-pass bloom, and richer water waves. Higher
+	 * tiers are deliberately NOT lightweight — but stay fully screen-space.
+	 */
+	public int quality = 1;
+
+	/** Subtle animated film grain; 0 disables. */
+	public float filmGrain = 0.0f;
 
 	/** Depth-normal sun specular on all surfaces ("PBR-ish" gloss); 0 disables. */
 	public float sunSpecular = 0.2f;
@@ -115,6 +125,8 @@ public final class VulkirisConfig {
 		aoStrength = other.aoStrength;
 		water = other.water;
 		ssrSteps = other.ssrSteps;
+		quality = other.quality;
+		filmGrain = other.filmGrain;
 		sunSpecular = other.sunSpecular;
 		vignette = other.vignette;
 		fxaa = other.fxaa;
@@ -141,8 +153,13 @@ public final class VulkirisConfig {
 		ssrSteps = switch (ssrSteps) {
 			case 0 -> 12;
 			case 12 -> 24;
+			case 24 -> 48;
 			default -> 0;
 		};
+	}
+
+	public void cycleQuality() {
+		quality = (quality + 1) % 3;
 	}
 
 	public VulkirisConfig sanitized() {
@@ -165,7 +182,9 @@ public final class VulkirisConfig {
 		skyIntensity = clamp(skyIntensity, 0.0f, 1.5f);
 		godRays = clamp(godRays, 0.0f, 1.0f);
 		aoStrength = clamp(aoStrength, 0.0f, 1.0f);
-		ssrSteps = ssrSteps >= 24 ? 24 : ssrSteps >= 12 ? 12 : 0;
+		ssrSteps = ssrSteps >= 48 ? 48 : ssrSteps >= 24 ? 24 : ssrSteps >= 12 ? 12 : 0;
+		quality = Math.max(0, Math.min(2, quality));
+		filmGrain = clamp(filmGrain, 0.0f, 0.15f);
 		sunSpecular = clamp(sunSpecular, 0.0f, 1.0f);
 		vignette = clamp(vignette, 0.0f, 1.0f);
 		return this;

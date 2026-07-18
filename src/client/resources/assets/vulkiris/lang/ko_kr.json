@@ -59,5 +59,11 @@
 	"vulkiris.msg.egg.1": "§9산나비§r — 도시가 기억하고 있다.",
 	"vulkiris.msg.egg.2": "§a숟가락은 없다.",
 	"vulkiris.msg.egg.3": "§7그가 지켜보고 있다...",
-	"vulkiris.msg.egg.off": "현실로 돌아왔습니다."
+	"vulkiris.msg.egg.off": "현실로 돌아왔습니다.",
+	"vulkiris.option.quality": "품질",
+	"vulkiris.quality.0": "라이트",
+	"vulkiris.quality.1": "높음",
+	"vulkiris.quality.2": "울트라",
+	"vulkiris.option.film_grain": "필름 그레인",
+	"vulkiris.ssr.ultra": "울트라"
 }

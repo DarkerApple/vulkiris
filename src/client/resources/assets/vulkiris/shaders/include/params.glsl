@@ -15,6 +15,7 @@ layout(std140) uniform VulkirisParams {
     vec4 BloomParams;   // x: bloom intensity, y: bloom threshold, z: sun scatter, w: 1 when NDC depth is 0..1
     vec4 Toggles;       // x: tonemap mode (0 off, 1 aces, 2 filmic), y: fog on, z: bloom on, w: tonemap strength
     vec4 Extra;         // x: warmth, y: ao strength, z: water shading on, w: god rays strength
-    vec4 Extra2;        // x: sun specular, y: light bleed, z: ssr steps (0/12/24), w: easter-egg mode
+    vec4 Extra2;        // x: sun specular, y: light bleed, z: ssr steps (0/12/24/48), w: easter-egg mode
     vec4 SunScreen;     // xy: sun position in UV space, z: 1 when usable, w: easter-egg strength
+    vec4 Quality;       // x: ao taps (8/16/24), y: god-ray taps (14/28/48), z: volumetric fog steps (0/12/20), w: film grain
 };

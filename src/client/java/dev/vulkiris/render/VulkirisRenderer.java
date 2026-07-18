@@ -151,10 +151,15 @@ public final class VulkirisRenderer {
 					pass.bindTexture("SceneDepthSampler", mainTarget.getDepthTextureView(), nearestSampler);
 					pass.setUniform("VulkirisParams", params);
 				});
-				fullscreenPass(encoder, VulkirisPipelines.bloomBlurH, TARGETS.bloomB.getColorTextureView(), pass ->
-						pass.bindTexture("SceneColorSampler", TARGETS.bloomA.getColorTextureView(), linearSampler));
-				fullscreenPass(encoder, VulkirisPipelines.bloomBlurV, TARGETS.bloomA.getColorTextureView(), pass ->
-						pass.bindTexture("SceneColorSampler", TARGETS.bloomB.getColorTextureView(), linearSampler));
+				// At higher quality tiers, blur twice: the second iteration widens the halo
+				// into a soft, expensive-looking glow (2 extra half-res passes).
+				int blurIterations = config.quality >= 1 ? 2 : 1;
+				for (int i = 0; i < blurIterations; i++) {
+					fullscreenPass(encoder, VulkirisPipelines.bloomBlurH, TARGETS.bloomB.getColorTextureView(), pass ->
+							pass.bindTexture("SceneColorSampler", TARGETS.bloomA.getColorTextureView(), linearSampler));
+					fullscreenPass(encoder, VulkirisPipelines.bloomBlurV, TARGETS.bloomA.getColorTextureView(), pass ->
+							pass.bindTexture("SceneColorSampler", TARGETS.bloomB.getColorTextureView(), linearSampler));
+				}
 			}
 
 			fullscreenPass(encoder, VulkirisPipelines.composite, mainTarget.getColorTextureView(), pass -> {

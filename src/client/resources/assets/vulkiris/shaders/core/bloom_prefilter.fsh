@@ -38,9 +38,13 @@ float ambientOcclusion(vec3 center, vec3 centerDdx, vec3 centerDdy) {
     float angle = hash(gl_FragCoord.xy) * 6.2831853;
     float c = cos(angle);
     float s = sin(angle);
+    int taps = int(Quality.x + 0.5);
     float occlusion = 0.0;
-    for (int i = 0; i < 8; i++) {
-        float t = (float(i) + 0.5) / 8.0;
+    for (int i = 0; i < 24; i++) {
+        if (i >= taps) {
+            break;
+        }
+        float t = (float(i) + 0.5) / float(taps);
         float a = t * 6.2831853 * 2.0;
         vec2 offset = vec2(cos(a) * c - sin(a) * s, cos(a) * s + sin(a) * c) * (radiusUv * t);
         vec2 uv = clamp(texCoord + offset, vec2(0.001), vec2(0.999));
@@ -55,7 +59,8 @@ float ambientOcclusion(vec3 center, vec3 centerDdx, vec3 centerDdy) {
         occlusion += max(dot(normal, v / len) - 0.08, 0.0) * rangeCheck;
     }
 
-    return clamp(1.0 - occlusion * 0.28, 0.0, 1.0);
+    // Normalized so the same strength setting reads equally at every tap count.
+    return clamp(1.0 - occlusion * (2.24 / float(taps)), 0.0, 1.0);
 }
 
 void main() {

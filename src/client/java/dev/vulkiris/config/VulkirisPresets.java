@@ -26,6 +26,7 @@ public final class VulkirisPresets {
 
 	static {
 		builtIn("potato", c -> {
+			c.quality = 0;
 			c.bloom = false;
 			c.lightBleed = 0.0f;
 			c.aoStrength = 0.0f;
@@ -39,6 +40,7 @@ public final class VulkirisPresets {
 			c.fxaa = false;
 		});
 		builtIn("light", c -> {
+			c.quality = 0;
 			c.bloomIntensity = 0.25f;
 			c.lightBleed = 0.15f;
 			c.aoStrength = 0.3f;
@@ -48,7 +50,7 @@ public final class VulkirisPresets {
 			c.skyIntensity = 0.5f;
 		});
 		builtIn("medium", c -> {
-			// The defaults are the medium preset.
+			// The defaults are the medium preset (quality tier: high).
 		});
 		builtIn("super", c -> {
 			c.bloomIntensity = 0.38f;
@@ -59,6 +61,7 @@ public final class VulkirisPresets {
 			c.skyIntensity = 0.75f;
 		});
 		builtIn("superplus", c -> {
+			c.quality = 2;
 			c.bloomIntensity = 0.42f;
 			c.lightBleed = 0.32f;
 			c.aoStrength = 0.7f;
@@ -68,28 +71,31 @@ public final class VulkirisPresets {
 			c.skyIntensity = 0.85f;
 		});
 		builtIn("fabulous", c -> {
+			c.quality = 2;
 			c.bloomIntensity = 0.45f;
 			c.lightBleed = 0.35f;
 			c.aoStrength = 0.75f;
 			c.godRays = 0.8f;
-			c.ssrSteps = 12;
+			c.ssrSteps = 24;
 			c.sunSpecular = 0.4f;
 			c.skyIntensity = 1.0f;
 			c.warmth = 0.06f;
 			c.fxaa = true;
 		});
 		builtIn("extreme", c -> {
+			c.quality = 2;
 			c.bloomIntensity = 0.5f;
 			c.lightBleed = 0.4f;
 			c.aoStrength = 0.85f;
 			c.godRays = 1.0f;
-			c.ssrSteps = 24;
+			c.ssrSteps = 48;
 			c.sunSpecular = 0.45f;
 			c.skyIntensity = 1.15f;
 			c.fogDensity = 0.5f;
 			c.fxaa = true;
 		});
 		builtIn("reallife", c -> {
+			c.quality = 2;
 			c.tonemap = "aces";
 			c.tonemapStrength = 0.95f;
 			c.exposure = 0.78f;
@@ -101,10 +107,11 @@ public final class VulkirisPresets {
 			c.lightBleed = 0.2f;
 			c.aoStrength = 0.9f;
 			c.godRays = 0.6f;
-			c.ssrSteps = 24;
+			c.ssrSteps = 48;
 			c.sunSpecular = 0.5f;
 			c.skyIntensity = 0.9f;
 			c.vignette = 0.28f;
+			c.filmGrain = 0.045f;
 			c.fxaa = true;
 		});
 	}

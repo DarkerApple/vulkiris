@@ -85,6 +85,8 @@ public final class VulkirisSettingsScreen extends Screen {
 			this.addSlider("vulkiris.option.contrast", 0.8f, 1.2f, config.contrast, v -> config.contrast = v);
 			this.addSlider("vulkiris.option.vignette", 0.0f, 0.6f, config.vignette, v -> config.vignette = v);
 			this.addToggle(() -> onOff("vulkiris.option.fxaa", config.fxaa), () -> config.fxaa = !config.fxaa);
+			this.addCycle(() -> label("vulkiris.option.quality", Component.translatable("vulkiris.quality." + config.quality)), config::cycleQuality);
+			this.addSlider("vulkiris.option.film_grain", 0.0f, 0.15f, config.filmGrain, v -> config.filmGrain = v);
 		} else {
 			this.addToggle(() -> onOff("vulkiris.option.bloom", config.bloom), () -> config.bloom = !config.bloom);
 			this.addSlider("vulkiris.option.bloom_intensity", 0.0f, 1.5f, config.bloomIntensity, v -> config.bloomIntensity = v);
@@ -175,7 +177,7 @@ public final class VulkirisSettingsScreen extends Screen {
 	}
 
 	private static String ssrKey(int steps) {
-		return steps >= 24 ? "vulkiris.ssr.high" : steps >= 12 ? "vulkiris.ssr.low" : "vulkiris.ssr.off";
+		return steps >= 48 ? "vulkiris.ssr.ultra" : steps >= 24 ? "vulkiris.ssr.high" : steps >= 12 ? "vulkiris.ssr.low" : "vulkiris.ssr.off";
 	}
 
 	private void markCustom() {

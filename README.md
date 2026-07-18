@@ -10,16 +10,21 @@ a small, predictable GPU cost.
 
 Cycle in game with **P**, or pick in the settings screen (**O**) / ModMenu:
 
-| Preset | What you get |
-| --- | --- |
-| 🥔 Potato | Tonemap + grade + fog only — a single fullscreen pass |
-| Light | + soft bloom, light AO |
-| Medium *(default)* | + god rays, light bleed, sun specular, water shading |
-| Super | Stronger everything |
-| Super+ | + water reflections (SSR low) |
-| Fabulous | + FXAA, SSR, warm grade, full skies |
-| Extreme | Maximum strengths, SSR high |
-| Real-Life | Filmic neutral grade, strong AO/SSR/specular, cinematic vignette |
+| Preset | Quality tier | What you get |
+| --- | --- | --- |
+| 🥔 Potato | Lite | Tonemap + grade + fog only — a single fullscreen pass |
+| Light | Lite | + soft bloom, light AO |
+| Medium *(default)* | High | + god rays (28 taps), volumetric mist, wide bloom, 16-tap AO, water shading |
+| Super | High | Stronger everything |
+| Super+ | **Ultra** | 48-tap god rays, 20-step volumetric fog, 24-tap AO, SSR low |
+| Fabulous | **Ultra** | + FXAA, SSR high with contact refinement, warm grade, full skies |
+| Extreme | **Ultra** | Maximum strengths, SSR ultra (48 steps) |
+| Real-Life | **Ultra** | Filmic neutral grade, SSR ultra, strong AO/specular, film grain, cinematic vignette |
+
+From Medium up the presets are deliberately **not** lightweight — they spend real GPU
+time on quality (more ray-march steps, volumetric fog, double-pass bloom). They stay
+fully screen-space though, which is exactly what keeps them **Sodium-compatible**:
+Vulkiris never touches terrain rendering, only the finished frame.
 
 **Make your own:** tweak anything (the preset becomes *Custom*), then **Export to
 Clipboard** and paste the JSON to a friend — they hit **Import from Clipboard** and it
@@ -33,8 +38,9 @@ installs as a user preset (stored in `config/vulkiris-presets/`, included in the
 | Filmic tonemapping (ACES/filmic, adjustable strength) + exposure/saturation/contrast + warm white balance | BSL-style grading | ~free (single composite pass) |
 | Soft bloom + **colored light bleed** (torch/lava glow tints nearby dark areas) | Complementary glow | 3 half-res passes |
 | Screen-space ambient occlusion | — | ~free (piggybacks the bloom chain's alpha channel) |
-| **God rays / sun shafts** (screen-space march toward the sun) | BSL | 14 depth taps, in-pass |
-| Water: animated sun glint, depth absorption, fresnel + **SSR reflections** | Photon-style water | in-pass; SSR gated by preset |
+| **God rays / sun shafts** (screen-space march toward the sun, jittered) | BSL | 14–48 depth taps by quality tier |
+| **Volumetric noise fog** — animated ground mist with sun in-scattering | BSL/Complementary | 12–20 march steps, High tier and up |
+| Water: animated multi-octave waves, sun glint, depth absorption, fresnel + **SSR reflections with binary-search contact refinement** | Photon-style water | in-pass; up to 48 steps by preset |
 | **Sun specular** on all surfaces from depth normals ("PBR-ish" gloss) | LabPBR feel, no resource packs needed | ~free |
 | Aerial-perspective fog with height falloff + sun scattering | — | ~free |
 | Sky grading: sunset/sunrise gradients (vanilla clouds catch them too), deep-blue day zenith, cool nights | — | ~free |
