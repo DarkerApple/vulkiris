@@ -2,7 +2,7 @@ package dev.vulkiris.mixin;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
-import dev.vulkiris.render.VulkirisRenderer;
+import dev.vulkiris.pipeline.PipelineManager;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -38,7 +38,7 @@ public abstract class LevelRendererMixin {
 			Vector4f fogColor,
 			boolean shouldRenderSky,
 			CallbackInfo ci) {
-		VulkirisRenderer.onLevelRendered(
+		PipelineManager.active().onLevelRendered(
 				cameraState,
 				this.levelRenderState,
 				modelViewMatrix,

@@ -2,7 +2,7 @@ package dev.vulkiris.gui;
 
 import dev.vulkiris.config.VulkirisConfig;
 import dev.vulkiris.config.VulkirisPresets;
-import dev.vulkiris.render.VulkirisRenderer;
+import dev.vulkiris.pipeline.PipelineManager;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -69,14 +69,14 @@ public final class VulkirisSettingsScreen extends Screen {
 			this.status = id != null
 					? Component.translatable("vulkiris.msg.imported", VulkirisPresets.displayName(id))
 					: Component.translatable("vulkiris.msg.import_failed");
-			VulkirisRenderer.clearFailure();
+			PipelineManager.active().clearFailure();
 			this.rebuild();
 		});
 
 		if (this.page == 0) {
 			this.addToggle(() -> onOff("vulkiris.option.effects", config.enabled), () -> {
 				config.enabled = !config.enabled;
-				VulkirisRenderer.clearFailure();
+				PipelineManager.active().clearFailure();
 			}, false);
 			this.addCycle(() -> label("vulkiris.option.tonemap", Component.translatable("vulkiris.tonemap." + config.tonemap)), config::cycleTonemap);
 			this.addSlider("vulkiris.option.brightness", 0.25f, 2.0f, config.exposure, v -> config.exposure = v);
@@ -152,7 +152,7 @@ public final class VulkirisSettingsScreen extends Screen {
 	@Override
 	public void onClose() {
 		VulkirisConfig.get().save();
-		VulkirisRenderer.clearFailure();
+		PipelineManager.active().clearFailure();
 		if (this.minecraft != null) {
 			this.minecraft.setScreenAndShow(this.parent);
 		}
@@ -160,7 +160,7 @@ public final class VulkirisSettingsScreen extends Screen {
 
 	private void cyclePreset(int direction) {
 		VulkirisPresets.cycle(direction);
-		VulkirisRenderer.clearFailure();
+		PipelineManager.active().clearFailure();
 		this.status = Component.translatable("vulkiris.msg.preset", VulkirisPresets.displayName(VulkirisConfig.get().preset));
 		this.rebuild();
 	}

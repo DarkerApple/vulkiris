@@ -6,8 +6,8 @@ import com.mojang.logging.LogUtils;
 import dev.vulkiris.config.VulkirisConfig;
 import dev.vulkiris.config.VulkirisPresets;
 import dev.vulkiris.gui.VulkirisSettingsScreen;
+import dev.vulkiris.pipeline.PipelineManager;
 import dev.vulkiris.render.VulkirisEggs;
-import dev.vulkiris.render.VulkirisRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -42,7 +42,7 @@ public final class VulkirisClient implements ClientModInitializer {
 		reloadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.vulkiris.reload_config", GLFW.GLFW_KEY_UNKNOWN, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(VulkirisClient::onEndTick);
-		LevelRenderEvents.BEFORE_TRANSLUCENT_TERRAIN.register(context -> VulkirisRenderer.captureWaterDepth(context.gameRenderer()));
+		LevelRenderEvents.BEFORE_TRANSLUCENT_TERRAIN.register(context -> PipelineManager.active().captureWaterDepth(context.gameRenderer()));
 		// Secret chat words swap the whole look; the message is swallowed instead of sent.
 		ClientSendMessageEvents.ALLOW_CHAT.register(message ->
 				!VulkirisEggs.handleChatMessage(Minecraft.getInstance(), message));
@@ -51,7 +51,7 @@ public final class VulkirisClient implements ClientModInitializer {
 			DeviceInfo info = RenderSystem.getDevice().getDeviceInfo();
 			LOGGER.info("Vulkiris running on the {} backend ({}, {})", info.backendName(), info.vendorName(), info.name());
 		});
-		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> VulkirisRenderer.shutdown());
+		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> PipelineManager.active().shutdown());
 
 		LOGGER.info("Vulkiris initialized");
 	}
@@ -61,7 +61,7 @@ public final class VulkirisClient implements ClientModInitializer {
 			VulkirisConfig config = VulkirisConfig.get();
 			config.enabled = !config.enabled;
 			config.save();
-			VulkirisRenderer.clearFailure();
+			PipelineManager.active().clearFailure();
 			feedback(client, Component.translatable(config.enabled ? "vulkiris.msg.enabled" : "vulkiris.msg.disabled"));
 		}
 		while (settingsKey.consumeClick()) {
@@ -71,13 +71,13 @@ public final class VulkirisClient implements ClientModInitializer {
 		}
 		while (cyclePresetKey.consumeClick()) {
 			String id = VulkirisPresets.cycle(1);
-			VulkirisRenderer.clearFailure();
+			PipelineManager.active().clearFailure();
 			feedback(client, Component.translatable("vulkiris.msg.preset", VulkirisPresets.displayName(id)));
 		}
 		while (reloadKey.consumeClick()) {
 			VulkirisConfig.load();
 			VulkirisPresets.reloadUserPresets();
-			VulkirisRenderer.clearFailure();
+			PipelineManager.active().clearFailure();
 			feedback(client, Component.translatable("vulkiris.msg.reloaded"));
 		}
 	}

@@ -1,10 +1,33 @@
 # Vulkiris
 
-A **lightweight shader mod** for Minecraft Java **26.2** that works with the new
-**Vulkan rendering backend** (and OpenGL too). No shader packs, no deferred pipeline,
-no shadow maps — a carefully chosen set of screen-space effects, scaled through eight
-presets from *Potato* to *Real-Life*, that make the game look dramatically better for
-a small, predictable GPU cost.
+**Vulkan + Iris.** Vulkiris is a shader platform for Minecraft Java **26.2**'s new
+**Vulkan rendering backend** (with OpenGL supported too). The long-term goal is what
+the name says: bringing Iris-style shader pack loading to the vanilla Vulkan renderer.
+What ships today is the platform's **built-in default shader** — a screen-space effect
+stack scaled through eight presets from *Potato* to *Real-Life*, which will remain the
+out-of-the-box look once pack loading lands.
+
+> Vulkiris is an independent project, not affiliated with the Iris Shaders team.
+
+## Architecture: platform + pipelines
+
+Rendering flows through one seam: `PipelineManager` holds the active
+`VulkirisPipeline`, and the game hooks (the `LevelRenderer` mixin and the
+pre-translucent depth capture) only ever talk to that interface. The built-in effects
+are `vulkiris:default` — the first implementation. Shader-pack-backed pipelines will
+plug into the same seam, so packs can be switched at runtime without touching the
+hooks.
+
+### Roadmap to pack loading
+
+1. **Now** — default pipeline (this repo): presets, quality tiers, full settings UI.
+2. **Pack discovery** — scan `shaderpacks/`, parse pack metadata and properties.
+3. **Post-chain packs** — run pack `composite`/`final`-style passes through the
+   platform's pass runner (the same machinery the default pipeline uses).
+4. **Full programs** — translate pack terrain/entity programs to vanilla-compilable
+   GLSL and map them onto the Vulkan backend's pipeline system. This is the hard,
+   long-tail step: the vanilla Vulkan compiler is stricter than GL and the gbuffer
+   model differs, so packs will land incrementally.
 
 ## Presets
 
