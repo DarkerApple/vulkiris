@@ -42,6 +42,9 @@ installs as a user preset (stored in `config/vulkiris-presets/`, included in the
 | **Volumetric noise fog** — animated ground mist with sun in-scattering | BSL/Complementary | 12–20 march steps, High tier and up |
 | Water: animated multi-octave waves, sun glint, depth absorption, fresnel + **SSR reflections with binary-search contact refinement** | Photon-style water | in-pass; up to 48 steps by preset |
 | **Sun specular** on all surfaces from depth normals ("PBR-ish" gloss) | LabPBR feel, no resource packs needed | ~free |
+| **Selective bloom** — sky barely blooms, saturated emissives (torches, lava, glowstone) glow vibrantly with boosted color | Shine | ~free (mask in the prefilter) |
+| **Rim lighting** — bright silhouette edges catching sky/sun light | Shine | 4 depth taps, in-pass |
+| **Toon shading** — quantized light bands + dark outlines (off by default) | Shine's cel look | ~free |
 | Aerial-perspective fog with height falloff + sun scattering | — | ~free |
 | Sky grading: sunset/sunrise gradients (vanilla clouds catch them too), deep-blue day zenith, cool nights | — | ~free |
 | Underwater & rain response, vignette, optional FXAA | — | ~free / 1 pass |

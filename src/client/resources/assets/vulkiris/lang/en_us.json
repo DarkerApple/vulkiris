@@ -65,5 +65,9 @@
 	"vulkiris.quality.1": "High",
 	"vulkiris.quality.2": "Ultra",
 	"vulkiris.option.film_grain": "Film Grain",
-	"vulkiris.ssr.ultra": "Ultra"
+	"vulkiris.ssr.ultra": "Ultra",
+	"vulkiris.option.selective_bloom": "Selective Bloom",
+	"vulkiris.option.rim_light": "Rim Light",
+	"vulkiris.option.toon": "Toon Shading",
+	"vulkiris.button.page_style": "Page: Style"
 }

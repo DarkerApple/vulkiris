@@ -27,7 +27,8 @@ public final class VulkirisSettingsScreen extends Screen {
 	private static final int GAP_Y = 4;
 
 	private final @Nullable Screen parent;
-	private boolean effectsPage;
+	/** 0 = Look, 1 = Effects, 2 = Style. */
+	private int page;
 	private int nextIndex;
 	private Component status = Component.empty();
 
@@ -72,7 +73,7 @@ public final class VulkirisSettingsScreen extends Screen {
 			this.rebuild();
 		});
 
-		if (!this.effectsPage) {
+		if (this.page == 0) {
 			this.addToggle(() -> onOff("vulkiris.option.effects", config.enabled), () -> {
 				config.enabled = !config.enabled;
 				VulkirisRenderer.clearFailure();
@@ -87,7 +88,7 @@ public final class VulkirisSettingsScreen extends Screen {
 			this.addToggle(() -> onOff("vulkiris.option.fxaa", config.fxaa), () -> config.fxaa = !config.fxaa);
 			this.addCycle(() -> label("vulkiris.option.quality", Component.translatable("vulkiris.quality." + config.quality)), config::cycleQuality);
 			this.addSlider("vulkiris.option.film_grain", 0.0f, 0.15f, config.filmGrain, v -> config.filmGrain = v);
-		} else {
+		} else if (this.page == 1) {
 			this.addToggle(() -> onOff("vulkiris.option.bloom", config.bloom), () -> config.bloom = !config.bloom);
 			this.addSlider("vulkiris.option.bloom_intensity", 0.0f, 1.5f, config.bloomIntensity, v -> config.bloomIntensity = v);
 			this.addSlider("vulkiris.option.bloom_threshold", 0.0f, 1.0f, config.bloomThreshold, v -> config.bloomThreshold = v);
@@ -99,21 +100,26 @@ public final class VulkirisSettingsScreen extends Screen {
 			this.addSlider("vulkiris.option.god_rays", 0.0f, 1.0f, config.godRays, v -> config.godRays = v);
 			this.addSlider("vulkiris.option.sky", 0.0f, 1.5f, config.skyIntensity, v -> config.skyIntensity = v);
 			this.addToggle(() -> onOff("vulkiris.option.water", config.water), () -> config.water = !config.water);
+		} else {
 			this.addCycle(() -> label("vulkiris.option.ssr", Component.translatable(ssrKey(config.ssrSteps))), config::cycleSsr);
 			this.addSlider("vulkiris.option.sun_specular", 0.0f, 1.0f, config.sunSpecular, v -> config.sunSpecular = v);
+			this.addToggle(() -> onOff("vulkiris.option.selective_bloom", config.selectiveBloom), () -> config.selectiveBloom = !config.selectiveBloom);
+			this.addSlider("vulkiris.option.rim_light", 0.0f, 1.0f, config.rimLight, v -> config.rimLight = v);
+			this.addToggle(() -> onOff("vulkiris.option.toon", config.toon), () -> config.toon = !config.toon);
 		}
 
 		// Bottom row: page switch + done.
 		int bottomRow = this.nextIndex + (this.nextIndex % 2);
-		Button page = this.addRenderableWidget(Button.builder(
-				Component.translatable(this.effectsPage ? "vulkiris.button.page_look" : "vulkiris.button.page_effects"),
+		String nextPageKey = this.page == 0 ? "vulkiris.button.page_effects" : this.page == 1 ? "vulkiris.button.page_style" : "vulkiris.button.page_look";
+		Button pageButton = this.addRenderableWidget(Button.builder(
+				Component.translatable(nextPageKey),
 				b -> {
-					this.effectsPage = !this.effectsPage;
+					this.page = (this.page + 1) % 3;
 					this.rebuild();
 				}).build());
-		page.setWidth(WIDGET_WIDTH);
-		page.setX(centerX - WIDGET_WIDTH - GAP_X / 2);
-		page.setY(this.rowY(bottomRow) + 8);
+		pageButton.setWidth(WIDGET_WIDTH);
+		pageButton.setX(centerX - WIDGET_WIDTH - GAP_X / 2);
+		pageButton.setY(this.rowY(bottomRow) + 8);
 		Button done = this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> this.onClose()).build());
 		done.setWidth(WIDGET_WIDTH);
 		done.setX(centerX + GAP_X / 2);

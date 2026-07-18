@@ -65,5 +65,9 @@
 	"vulkiris.quality.1": "높음",
 	"vulkiris.quality.2": "울트라",
 	"vulkiris.option.film_grain": "필름 그레인",
-	"vulkiris.ssr.ultra": "울트라"
+	"vulkiris.ssr.ultra": "울트라",
+	"vulkiris.option.selective_bloom": "선택적 블룸",
+	"vulkiris.option.rim_light": "림 라이트",
+	"vulkiris.option.toon": "툰 셰이딩",
+	"vulkiris.button.page_style": "페이지: 스타일"
 }

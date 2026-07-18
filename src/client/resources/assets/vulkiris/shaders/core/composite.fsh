@@ -100,6 +100,30 @@ void main() {
         color += vec3(1.0, 0.93, 0.8) * spec * Extra2.x * 0.35 * (0.35 + 0.65 * baseLuma);
     }
 
+    // --- Silhouette edge factor, shared by rim lighting and the toon outline. ---
+    float silhouette = 0.0;
+    if ((Style.y > 0.001 || Style.z > 0.5) && !isSky) {
+        vec2 texel = 2.0 / Screen.xy;
+        float behind = 0.0;
+        for (int i = 0; i < 4; i++) {
+            vec2 offset = i == 0 ? vec2(texel.x, 0.0)
+                    : i == 1 ? vec2(-texel.x, 0.0)
+                    : i == 2 ? vec2(0.0, texel.y)
+                    : vec2(0.0, -texel.y);
+            float d = textureLod(SceneDepthSampler, clamp(texCoord + offset, vec2(0.0), vec2(1.0)), 0.0).r;
+            float neighborDist = d < 1.0e-6 ? 4000.0 : length(viewPosAt(texCoord + offset, d));
+            behind = max(behind, neighborDist - viewDist);
+        }
+        // An edge counts when the background sits well behind this surface.
+        silhouette = smoothstep(0.6, 3.5, behind);
+    }
+
+    // --- Shine-style rim lighting: bright silhouette edges catching sky/sun light. ---
+    if (Style.y > 0.001 && silhouette > 0.001) {
+        vec3 rimColor = mix(Fog.rgb * 1.15, vec3(1.0, 0.9, 0.72), SunDirView.w * 0.5);
+        color += rimColor * silhouette * Style.y * (0.25 + 0.3 * baseLuma);
+    }
+
     // --- Water surface shading: depth absorption, animated sun glint, fresnel/SSR reflections. ---
     if (Extra.z > 0.5 && !isSky) {
         float waterDepth = textureLod(WaterDepthSampler, texCoord, 0.0).r;
@@ -335,6 +359,15 @@ void main() {
     }
     linearColor = mix(linearColor, curved, Toggles.w);
     color = sqrt(clamp(linearColor, 0.0, 1.0));
+
+    // --- Toon shading: quantized lighting bands plus dark silhouette outlines. ---
+    if (Style.z > 0.5) {
+        float toonLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        float bands = 5.0;
+        float quantized = (floor(toonLuma * bands) + 0.5) / bands;
+        color *= mix(1.0, quantized / max(toonLuma, 1.0e-4), 0.7);
+        color *= 1.0 - silhouette * 0.55;
+    }
 
     // --- Color grade. ---
     float saturation = GradeA.y * (1.0 - rain * 0.15) * (1.0 - underwater * 0.1);

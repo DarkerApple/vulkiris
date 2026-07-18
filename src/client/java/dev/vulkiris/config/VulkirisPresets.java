@@ -80,6 +80,7 @@ public final class VulkirisPresets {
 			c.sunSpecular = 0.4f;
 			c.skyIntensity = 1.0f;
 			c.warmth = 0.06f;
+			c.rimLight = 0.2f;
 			c.fxaa = true;
 		});
 		builtIn("extreme", c -> {
@@ -92,6 +93,7 @@ public final class VulkirisPresets {
 			c.sunSpecular = 0.45f;
 			c.skyIntensity = 1.15f;
 			c.fogDensity = 0.5f;
+			c.rimLight = 0.3f;
 			c.fxaa = true;
 		});
 		builtIn("reallife", c -> {

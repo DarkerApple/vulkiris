@@ -83,6 +83,18 @@ void main() {
 
     // Derivatives must be taken in uniform control flow, so compute them unconditionally.
     float centerDepth = texture(SceneDepthSampler, texCoord).r;
+
+    // Selective bloom: the sky barely blooms (only the sun/moon disc survives), while
+    // saturated emissives (torches, lava, glowstone) bloom vibrantly with boosted color.
+    if (Style.x > 0.5) {
+        float saturationMask = (brightness - min(color.r, min(color.g, color.b))) / max(brightness, 1.0e-4);
+        if (centerDepth < 1.0e-6) {
+            weight *= smoothstep(0.90, 0.99, brightness);
+        } else {
+            weight *= 0.35 + 0.65 * clamp(saturationMask * 2.2, 0.0, 1.0);
+            color = mix(color, color * (1.0 + saturationMask * 0.8), 0.45);
+        }
+    }
     vec3 centerPos = viewPosAt(texCoord, centerDepth);
     vec3 centerDdx = dFdx(centerPos);
     vec3 centerDdy = dFdy(centerPos);

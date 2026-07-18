@@ -41,10 +41,11 @@ import java.nio.ByteOrder;
  * vec4 Extra2          (offset 352)  sun specular, light bleed, ssr steps, easter-egg mode
  * vec4 SunScreen       (offset 368)  xy sun position in UV space, z on-screen flag, w easter-egg strength
  * vec4 Quality         (offset 384)  ao taps, god-ray taps, volumetric fog steps, film grain
+ * vec4 Style           (offset 400)  selective bloom flag, rim light, toon flag, unused
  * </pre>
  */
 public final class VulkirisUniforms {
-	private static final int SIZE_BYTES = 400;
+	private static final int SIZE_BYTES = 416;
 
 	private static final ByteBuffer data = ByteBuffer.allocateDirect(SIZE_BYTES).order(ByteOrder.nativeOrder());
 	private static final Matrix4f invProjection = new Matrix4f();
@@ -143,6 +144,7 @@ public final class VulkirisUniforms {
 		int rayTaps = config.quality >= 2 ? 48 : config.quality == 1 ? 28 : 14;
 		int fogSteps = config.quality >= 2 ? 20 : config.quality == 1 ? 12 : 0;
 		putVec4(aoTaps, rayTaps, fogSteps, config.filmGrain);
+		putVec4(config.selectiveBloom ? 1.0f : 0.0f, config.rimLight, config.toon ? 1.0f : 0.0f, 0.0f);
 		data.rewind();
 	}
 

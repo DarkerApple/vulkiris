@@ -34,6 +34,17 @@ public final class VulkirisConfig {
 	public float bloomThreshold = 0.72f;
 	/** Colored light bleed: bloom glow filling nearby dark areas (torch glow feel). */
 	public float lightBleed = 0.25f;
+	/**
+	 * Shine-style selective bloom: sky pixels barely bloom (only the sun/moon disc) and
+	 * saturated emissives (torches, lava, glowstone) bloom vibrantly with boosted color.
+	 */
+	public boolean selectiveBloom = true;
+
+	/** Shine-style rim lighting: bright silhouette edges on geometry; 0 disables. */
+	public float rimLight = 0.0f;
+
+	/** Cel-shaded look: quantized lighting bands plus dark depth-edge outlines. */
+	public boolean toon = false;
 
 	public boolean fog = true;
 	public float fogDensity = 0.45f;
@@ -117,6 +128,9 @@ public final class VulkirisConfig {
 		bloomIntensity = other.bloomIntensity;
 		bloomThreshold = other.bloomThreshold;
 		lightBleed = other.lightBleed;
+		selectiveBloom = other.selectiveBloom;
+		rimLight = other.rimLight;
+		toon = other.toon;
 		fog = other.fog;
 		fogDensity = other.fogDensity;
 		sunScatter = other.sunScatter;
@@ -177,6 +191,7 @@ public final class VulkirisConfig {
 		bloomIntensity = clamp(bloomIntensity, 0.0f, 2.0f);
 		bloomThreshold = clamp(bloomThreshold, 0.0f, 1.0f);
 		lightBleed = clamp(lightBleed, 0.0f, 1.0f);
+		rimLight = clamp(rimLight, 0.0f, 1.0f);
 		fogDensity = clamp(fogDensity, 0.0f, 1.0f);
 		sunScatter = clamp(sunScatter, 0.0f, 2.0f);
 		skyIntensity = clamp(skyIntensity, 0.0f, 1.5f);
