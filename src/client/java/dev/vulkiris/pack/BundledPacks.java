@@ -21,7 +21,9 @@ public final class BundledPacks {
 	private static final Map<String, List<String>> PACKS = Map.of(
 			"vulkiris-aurora", List.of("vulkiris.pack.json", "shaders/aurora.fsh"),
 			"vulkiris-noir", List.of("vulkiris.pack.json", "shaders/noir.fsh"),
-			"vulkiris-crt", List.of("vulkiris.pack.json", "shaders/crt.fsh"));
+			"vulkiris-crt", List.of("vulkiris.pack.json", "shaders/crt.fsh"),
+			"vulkiris-lagoon", List.of("vulkiris.pack.json",
+					"shaders/glow_extract.fsh", "shaders/glow_blur.fsh", "shaders/lagoon.fsh"));
 
 	private BundledPacks() {
 	}

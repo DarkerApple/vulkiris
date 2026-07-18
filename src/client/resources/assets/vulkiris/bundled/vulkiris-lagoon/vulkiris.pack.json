@@ -1,0 +1,21 @@
+{
+	"name": "Vulkiris Lagoon",
+	"author": "Vulkiris",
+	"waterDepth": true,
+	"passes": [
+		{ "fragment": "shaders/glow_extract.fsh", "scale": 0.5 },
+		{ "fragment": "shaders/glow_blur.fsh", "scale": 0.5 },
+		{ "fragment": "shaders/lagoon.fsh" }
+	],
+	"settings": [
+		{ "id": "glow", "name": "Sun Glow", "min": 0.0, "max": 1.0, "default": 0.5 },
+		{ "id": "warmth", "name": "Tropic Warmth", "min": 0.0, "max": 1.0, "default": 0.55 },
+		{ "id": "caustics", "name": "Caustics", "min": 0.0, "max": 1.0, "default": 0.7 },
+		{ "id": "tint", "name": "Water Tint", "min": 0.0, "max": 1.0, "default": 0.6 }
+	],
+	"presets": {
+		"Postcard": { "glow": 0.75, "warmth": 0.85, "caustics": 0.55, "tint": 0.45 },
+		"Snorkel": { "glow": 0.35, "warmth": 0.3, "caustics": 1.0, "tint": 0.9 },
+		"Subtle": { "glow": 0.3, "warmth": 0.35, "caustics": 0.4, "tint": 0.3 }
+	}
+}
