@@ -202,6 +202,26 @@ public final class VulkirisPresets {
 		}
 	}
 
+	/** Deletes a user preset file. Built-ins cannot be deleted. Returns true on success. */
+	public static boolean deleteUserPreset(String id) {
+		if (BUILT_INS.containsKey(id)) {
+			return false;
+		}
+		try {
+			boolean removed = Files.deleteIfExists(VulkirisConfig.presetsDir().resolve(id + ".json"));
+			reloadUserPresets();
+			VulkirisConfig config = VulkirisConfig.get();
+			if (id.equals(config.preset)) {
+				config.preset = CUSTOM;
+				config.save();
+			}
+			return removed;
+		} catch (Exception e) {
+			VulkirisClient.LOGGER.warn("Could not delete preset {}", id, e);
+			return false;
+		}
+	}
+
 	public static Component displayName(String id) {
 		if (BUILT_INS.containsKey(id)) {
 			return Component.translatable("vulkiris.preset." + id);

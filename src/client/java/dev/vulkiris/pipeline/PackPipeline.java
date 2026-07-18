@@ -67,8 +67,12 @@ public final class PackPipeline implements VulkirisPipeline {
 	private int consecutiveFailures;
 	private boolean failed;
 	private boolean waterDepthCaptured;
-	private com.mojang.blaze3d.buffers.GpuBuffer settingsBuffer;
-	private GpuBufferSlice settingsSlice;
+	// Small ring so per-frame writes never land in a buffer the GPU is still reading.
+	private static final int SETTINGS_RING = 3;
+	private final com.mojang.blaze3d.buffers.GpuBuffer[] settingsBuffers =
+			new com.mojang.blaze3d.buffers.GpuBuffer[SETTINGS_RING];
+	private final GpuBufferSlice[] settingsSlices = new GpuBufferSlice[SETTINGS_RING];
+	private int settingsRingIndex;
 	private final java.nio.ByteBuffer settingsData =
 			java.nio.ByteBuffer.allocateDirect(32).order(java.nio.ByteOrder.nativeOrder());
 
@@ -257,12 +261,14 @@ public final class PackPipeline implements VulkirisPipeline {
 
 	/** Uploads the pack's declared setting values (padded to 8 floats, two vec4s). */
 	private GpuBufferSlice uploadSettings(CommandEncoder encoder) {
-		if (this.settingsBuffer == null) {
-			this.settingsBuffer = RenderSystem.getDevice().createBuffer(
-					() -> "vulkiris pack settings",
+		this.settingsRingIndex = (this.settingsRingIndex + 1) % SETTINGS_RING;
+		int index = this.settingsRingIndex;
+		if (this.settingsBuffers[index] == null) {
+			this.settingsBuffers[index] = RenderSystem.getDevice().createBuffer(
+					() -> "vulkiris pack settings " + index,
 					com.mojang.blaze3d.buffers.GpuBuffer.USAGE_UNIFORM | com.mojang.blaze3d.buffers.GpuBuffer.USAGE_COPY_DST,
 					32);
-			this.settingsSlice = this.settingsBuffer.slice();
+			this.settingsSlices[index] = this.settingsBuffers[index].slice();
 		}
 		this.settingsData.clear();
 		List<ShaderPack.Setting> settings = this.pack.settings();
@@ -272,8 +278,8 @@ public final class PackPipeline implements VulkirisPipeline {
 					: 0.0f);
 		}
 		this.settingsData.rewind();
-		encoder.writeToBuffer(this.settingsSlice, this.settingsData);
-		return this.settingsSlice;
+		encoder.writeToBuffer(this.settingsSlices[index], this.settingsData);
+		return this.settingsSlices[index];
 	}
 
 	private void ensureSamplers() {
@@ -330,10 +336,12 @@ public final class PackPipeline implements VulkirisPipeline {
 			this.nearestSampler = null;
 		}
 		VulkirisUniforms.close();
-		if (this.settingsBuffer != null) {
-			this.settingsBuffer.close();
-			this.settingsBuffer = null;
-			this.settingsSlice = null;
+		for (int i = 0; i < SETTINGS_RING; i++) {
+			if (this.settingsBuffers[i] != null) {
+				this.settingsBuffers[i].close();
+				this.settingsBuffers[i] = null;
+				this.settingsSlices[i] = null;
+			}
 		}
 		this.passPipelines.clear();
 		this.fragmentSources.clear();

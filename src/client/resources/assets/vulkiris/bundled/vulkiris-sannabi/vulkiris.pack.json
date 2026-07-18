@@ -1,0 +1,10 @@
+{
+	"name": "SANNABI (secret)",
+	"author": "Vulkiris",
+	"passes": [ { "fragment": "shaders/sannabi.fsh" } ],
+	"settings": [
+		{ "id": "strength", "name": "Strength", "min": 0.0, "max": 1.0, "default": 0.85 },
+		{ "id": "accent", "name": "Warm Accents", "min": 0.0, "max": 1.0, "default": 0.6 }
+	],
+	"presets": { "Story": { "strength": 0.7, "accent": 0.5 }, "Full Dive": { "strength": 1.0, "accent": 0.8 } }
+}

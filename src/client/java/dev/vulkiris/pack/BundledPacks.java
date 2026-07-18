@@ -26,29 +26,51 @@ public final class BundledPacks {
 	private BundledPacks() {
 	}
 
+	/** Hidden packs installed only when their Easter egg is discovered. */
+	private static final Map<String, List<String>> EGG_PACKS = Map.of(
+			"vulkiris-sannabi", List.of("vulkiris.pack.json", "shaders/sannabi.fsh"),
+			"vulkiris-matrix", List.of("vulkiris.pack.json", "shaders/matrix.fsh"),
+			"vulkiris-herobrine", List.of("vulkiris.pack.json", "shaders/herobrine.fsh"),
+			"vulkiris-backrooms", List.of("vulkiris.pack.json", "shaders/backrooms.fsh"));
+
 	public static void installMissing() {
 		for (Map.Entry<String, List<String>> pack : PACKS.entrySet()) {
-			Path target = PackRepository.dir().resolve(pack.getKey());
-			if (Files.isDirectory(target)) {
-				continue;
-			}
-			try {
-				for (String file : pack.getValue()) {
-					Identifier id = Identifier.fromNamespaceAndPath(VulkirisClient.MOD_ID, "bundled/" + pack.getKey() + "/" + file);
-					Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(id);
-					if (resource.isEmpty()) {
-						throw new IllegalStateException("Missing bundled resource " + id);
-					}
-					Path out = target.resolve(file);
-					Files.createDirectories(out.getParent());
-					try (InputStream in = resource.get().open()) {
-						Files.write(out, in.readAllBytes());
-					}
+			install(pack.getKey(), pack.getValue());
+		}
+	}
+
+	/** Installs an egg-unlocked pack. Returns true only when it was newly installed. */
+	public static boolean installEggPack(String packId) {
+		List<String> files = EGG_PACKS.get(packId);
+		if (files == null || Files.isDirectory(PackRepository.dir().resolve(packId))) {
+			return false;
+		}
+		return install(packId, files);
+	}
+
+	private static boolean install(String packId, List<String> files) {
+		Path target = PackRepository.dir().resolve(packId);
+		if (Files.isDirectory(target)) {
+			return false;
+		}
+		try {
+			for (String file : files) {
+				Identifier id = Identifier.fromNamespaceAndPath(VulkirisClient.MOD_ID, "bundled/" + packId + "/" + file);
+				Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(id);
+				if (resource.isEmpty()) {
+					throw new IllegalStateException("Missing bundled resource " + id);
 				}
-				VulkirisClient.LOGGER.info("Installed bundled shader pack '{}'", pack.getKey());
-			} catch (Exception e) {
-				VulkirisClient.LOGGER.warn("Could not install bundled pack '{}'", pack.getKey(), e);
+				Path out = target.resolve(file);
+				Files.createDirectories(out.getParent());
+				try (InputStream in = resource.get().open()) {
+					Files.write(out, in.readAllBytes());
+				}
 			}
+			VulkirisClient.LOGGER.info("Installed bundled shader pack '{}'", packId);
+			return true;
+		} catch (Exception e) {
+			VulkirisClient.LOGGER.warn("Could not install bundled pack '{}'", packId, e);
+			return false;
 		}
 	}
 }

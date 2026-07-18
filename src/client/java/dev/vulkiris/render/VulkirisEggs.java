@@ -1,6 +1,7 @@
 package dev.vulkiris.render;
 
 import dev.vulkiris.VulkirisClient;
+import dev.vulkiris.pack.BundledPacks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -10,19 +11,30 @@ import java.util.Map;
 /**
  * Chat-triggered Easter-egg looks. Typing a secret word in chat (exact match, any case)
  * swallows the message and cross-fades the whole screen into a themed grade; typing the
- * same word again fades back to normal. Session-only — never saved to the config.
+ * same word again fades back to normal. The first trigger also unlocks a matching
+ * standalone shader pack in the shader pack list. Session-only — never saved to config.
  */
 public final class VulkirisEggs {
 	public static final int NONE = 0;
 	public static final int SANNABI = 1;
 	public static final int MATRIX = 2;
 	public static final int HEROBRINE = 3;
+	public static final int BACKROOMS = 4;
 
 	private static final Map<String, Integer> WORDS = Map.of(
 			"sannabi", SANNABI,
 			"산나비", SANNABI,
 			"matrix", MATRIX,
-			"herobrine", HEROBRINE);
+			"herobrine", HEROBRINE,
+			"backrooms", BACKROOMS,
+			"백룸", BACKROOMS);
+
+	/** Egg mode -> the hidden shader pack it unlocks. */
+	private static final Map<Integer, String> UNLOCKS = Map.of(
+			SANNABI, "vulkiris-sannabi",
+			MATRIX, "vulkiris-matrix",
+			HEROBRINE, "vulkiris-herobrine",
+			BACKROOMS, "vulkiris-backrooms");
 
 	private static int mode = NONE;
 	private static int fadingTo = NONE;
@@ -44,6 +56,10 @@ public final class VulkirisEggs {
 			fadingTo = triggered;
 			mode = triggered;
 			VulkirisClient.feedback(client, Component.translatable("vulkiris.msg.egg." + triggered));
+			String packId = UNLOCKS.get(triggered);
+			if (packId != null && BundledPacks.installEggPack(packId)) {
+				VulkirisClient.feedback(client, Component.translatable("vulkiris.msg.egg_unlocked", packId));
+			}
 		}
 		return true;
 	}

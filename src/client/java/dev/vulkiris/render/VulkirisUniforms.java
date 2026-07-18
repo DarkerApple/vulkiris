@@ -63,8 +63,15 @@ public final class VulkirisUniforms {
 	private static final Vector3f fogColor = new Vector3f();
 	private static final Vector4f sunClip = new Vector4f();
 
-	private static GpuBuffer buffer;
-	private static GpuBufferSlice slice;
+	/**
+	 * Ring of per-frame buffers. Writing into the buffer the GPU is still reading from the
+	 * previous frame forces the driver to stall or copy; rotating over three buffers keeps
+	 * CPU writes and in-flight GPU reads apart, which matters for frame pacing on Vulkan.
+	 */
+	private static final int RING_SIZE = 3;
+	private static final GpuBuffer[] buffers = new GpuBuffer[RING_SIZE];
+	private static final GpuBufferSlice[] slices = new GpuBufferSlice[RING_SIZE];
+	private static int ringIndex;
 
 	private VulkirisUniforms() {
 	}
@@ -170,22 +177,26 @@ public final class VulkirisUniforms {
 	}
 
 	public static GpuBufferSlice upload(CommandEncoder encoder) {
-		if (buffer == null) {
-			buffer = RenderSystem.getDevice().createBuffer(
-					() -> "vulkiris params",
+		ringIndex = (ringIndex + 1) % RING_SIZE;
+		if (buffers[ringIndex] == null) {
+			int index = ringIndex;
+			buffers[index] = RenderSystem.getDevice().createBuffer(
+					() -> "vulkiris params " + index,
 					GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST,
 					SIZE_BYTES);
-			slice = buffer.slice();
+			slices[index] = buffers[index].slice();
 		}
-		encoder.writeToBuffer(slice, data);
-		return slice;
+		encoder.writeToBuffer(slices[ringIndex], data);
+		return slices[ringIndex];
 	}
 
 	public static void close() {
-		if (buffer != null) {
-			buffer.close();
-			buffer = null;
-			slice = null;
+		for (int i = 0; i < RING_SIZE; i++) {
+			if (buffers[i] != null) {
+				buffers[i].close();
+				buffers[i] = null;
+				slices[i] = null;
+			}
 		}
 	}
 

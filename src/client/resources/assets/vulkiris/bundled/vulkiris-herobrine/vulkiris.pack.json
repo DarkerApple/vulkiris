@@ -1,0 +1,9 @@
+{
+	"name": "HEROBRINE (secret)",
+	"author": "Vulkiris",
+	"passes": [ { "fragment": "shaders/herobrine.fsh" } ],
+	"settings": [
+		{ "id": "dread", "name": "Dread", "min": 0.0, "max": 1.0, "default": 0.8 }
+	],
+	"presets": { "Watched": { "dread": 0.5 }, "He Is Here": { "dread": 1.0 } }
+}

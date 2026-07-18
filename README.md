@@ -29,7 +29,8 @@ Vulkan** unchanged.
 Making a pack is a `vulkiris.pack.json` plus fragment shaders — up to eight ordered
 fullscreen passes with scene color, depth, the previous pass, and the shared
 `VulkirisParams` uniform block (time, sun, camera, matrices, fog) available. See
-**[docs/PACK_FORMAT.md](docs/PACK_FORMAT.md)** for the full guide and
+**[docs/PACK_FORMAT.md](docs/PACK_FORMAT.md)** for the full guide
+(plain-text edition: [docs/VULKIRIS_PACK_GUIDE.txt](docs/VULKIRIS_PACK_GUIDE.txt)) and
 [docs/example-packs/crt](docs/example-packs/crt) for a copy-paste CRT demo.
 
 ### Roadmap

@@ -1,0 +1,198 @@
+=============================================================================
+  VULKIRIS SHADER PACK GUIDE (pack format v1.2)
+  How to make your own shader pack for Vulkiris — plain-text edition
+=============================================================================
+
+Vulkiris packs are compiled by Minecraft's own shader compiler, so one pack
+runs on BOTH the OpenGL and the experimental Vulkan backend. No external
+tools, no game restart while iterating.
+
+-----------------------------------------------------------------------------
+1. WHERE PACKS LIVE
+-----------------------------------------------------------------------------
+
+A pack is a folder (or a .zip with the same layout) inside the game's
+"shaderpacks/" directory:
+
+    .minecraft/shaderpacks/
+    └── my-pack/                (or my-pack.zip)
+        ├── vulkiris.pack.json
+        └── shaders/
+            ├── first.fsh
+            └── final.fsh
+
+In game: press O (Vulkiris Settings) → "Shader Packs…". There is an
+"Open Pack Folder" button that takes you straight to the directory, and a
+"Refresh" button that re-scans it. Click a pack to compile + activate it.
+
+Tip: the bundled packs (vulkiris-aurora, vulkiris-noir, vulkiris-crt) are
+extracted into shaderpacks/ on first launch exactly so you can open them and
+learn from them. Copy one and start editing.
+
+-----------------------------------------------------------------------------
+2. vulkiris.pack.json — THE MANIFEST
+-----------------------------------------------------------------------------
+
+    {
+      "name": "My Pack",
+      "author": "you",
+      "waterDepth": false,
+      "passes": [
+        { "fragment": "shaders/first.fsh", "scale": 0.5 },
+        { "fragment": "shaders/final.fsh" }
+      ],
+      "settings": [
+        { "id": "strength", "name": "Strength",
+          "min": 0.0, "max": 1.0, "default": 0.5 }
+      ],
+      "presets": {
+        "Calm":  { "strength": 0.25 },
+        "Vivid": { "strength": 0.9 }
+      }
+    }
+
+Field reference:
+
+  name        Display name in the pack list. Required.
+  author      Shown under the name. Optional.
+  passes      1–8 fullscreen passes, run in order every frame after the
+              world has rendered. Required.
+    fragment  Pack-relative path to the pass's fragment shader. Required.
+    scale     Optional, default 1.0, range 0.1–1.0. Output resolution of
+              this pass relative to the screen — use 0.5 or 0.25 for cheap
+              blur chains. The LAST pass always writes at full resolution.
+  waterDepth  Optional. When true, the depth buffer is snapshotted right
+              before water/translucent terrain draws and bound to every
+              pass as WaterDepthSampler. Compare it with SceneDepthSampler:
+              where they differ, there is water in front.
+  settings    Optional, max 8 entries. Each becomes a slider in the pack
+              screen AND in the main settings tabs while your pack is
+              active. Values reach your GLSL through the pack settings
+              uniform block (section 4).
+  presets     Optional, max 6. Named value sets shown as buttons above the
+              sliders. Keys inside each preset are setting ids.
+
+-----------------------------------------------------------------------------
+3. WRITING A PASS
+-----------------------------------------------------------------------------
+
+Every pass is a fragment shader drawn over a fullscreen triangle. Skeleton:
+
+    #version 330
+
+    #moj_import <vulkiris:params.glsl>
+
+    uniform sampler2D PreviousSampler;
+
+    in vec2 texCoord;
+    out vec4 fragColor;
+
+    void main() {
+        vec3 color = texture(PreviousSampler, texCoord).rgb;
+        color *= 0.8 + 0.2 * sin(Screen.z * 3.0);   // pulse with time
+        fragColor = vec4(color, 1.0);
+    }
+
+Available inputs — declare ONLY what you use, but everything you declare
+must come from this list:
+
+  sampler2D SceneColorSampler   The untouched scene, snapshotted before
+                                your passes ran.
+  sampler2D SceneDepthSampler   The live depth buffer. Minecraft 26.2 uses
+                                REVERSED depth: the sky is ~0.0, near
+                                geometry is ~1.0. Test for sky with
+                                depth < 1.0e-6.
+  sampler2D PreviousSampler     Output of the previous pass. For the first
+                                pass this is the scene snapshot.
+  sampler2D WaterDepthSampler   Pre-water depth snapshot. Only bound when
+                                the manifest sets "waterDepth": true.
+  VulkirisParams block          Time, matrices, sun/moon, camera, fog…
+                                imported via <vulkiris:params.glsl>.
+  VulkirisPackSettings block    Your own sliders, imported via
+                                <vulkiris:pack_settings.glsl>.
+
+Imports:
+  #moj_import <vulkiris:params.glsl>     from Vulkiris' own resources
+  #moj_import "my/util.glsl"             (quotes) from inside your pack
+
+Handy VulkirisParams fields (see params.glsl in the repo for the full list):
+
+  Screen.xy      screen size in pixels        Screen.z   time in seconds
+  Screen.w       1.0 when camera underwater
+  SunDirView     xyz = view-space direction of the ACTIVE celestial body
+                 (sun by day, moon at night), w = its visibility 0–1
+  SunDirWorld    xyz = world-space TRUE sun direction, w = sky intensity
+  Celestial.x    1.0 when the moon is the active body (cool it down!)
+  CameraPos      xyz = camera world position, w = rain factor 0–1
+  Fog.rgb        the frame's fog color         Fog.w     fog density setting
+  InvProjection  clip → view reprojection (depth reconstruction)
+  BloomParams.w  1.0 when depth range is 0..1 (Vulkan), else -1..1 style
+
+-----------------------------------------------------------------------------
+4. PACK SETTINGS IN GLSL
+-----------------------------------------------------------------------------
+
+    #moj_import <vulkiris:pack_settings.glsl>
+
+Your declared settings arrive in DECLARATION ORDER, packed four at a time:
+
+  setting #1..4  ->  PackA.x, PackA.y, PackA.z, PackA.w
+  setting #5..8  ->  PackB.x, PackB.y, PackB.z, PackB.w
+
+Example: with settings [strength, tint], read them as
+
+    float strength = PackA.x;
+    float tint     = PackA.y;
+
+While your pack is active, the main Vulkiris settings tabs (Look / Effects /
+Style) switch to showing YOUR sliders and presets, so users find them where
+they expect. Changed values apply live — no recompile.
+
+-----------------------------------------------------------------------------
+5. GLSL DIALECT RULES (BOTH BACKENDS)
+-----------------------------------------------------------------------------
+
+To stay compilable on OpenGL AND Vulkan, write "vanilla dialect" GLSL:
+
+  * Start with:  #version 330
+  * NO layout(binding=...) / layout(set=...) qualifiers — the platform
+    assigns bindings automatically on both backends.
+  * Uniform blocks are std140 (the imported ones already are).
+  * Avoid texture()/dFdx()/dFdy() inside non-uniform branches or loops with
+    varying exit — Vulkan validation rejects it. Use textureLod(...,0.0)
+    inside branches, or hoist the sample above the branch.
+  * smoothstep() needs edge0 < edge1. For a "descending" threshold, negate
+    the value instead: smoothstep(a, b, -x).
+  * Depth is REVERSED (sky ~ 0.0). When reconstructing positions, check
+    BloomParams.w for the depth-range convention (see composite.fsh in the
+    Vulkiris repo for a worked example).
+
+The Vulkan backend validates far more strictly than OpenGL. If your pack
+works on GL but fails on Vulkan, the game log's ShaderCompileException
+message tells you the exact line.
+
+-----------------------------------------------------------------------------
+6. ITERATING AND DEBUGGING
+-----------------------------------------------------------------------------
+
+  * Edit your .fsh / .json, then just re-select the pack in the pack screen
+    (Refresh + click). No game restart.
+  * Compile errors are logged and Vulkiris falls back to plain rendering
+    after a few retries instead of crashing — check the log, fix, re-select.
+  * Start from a bundled pack: aurora (grading + procedural sky curtains),
+    noir (grading + letterbox), crt (scanlines, curvature, time animation).
+  * Keep it cheap: prefer half/quarter "scale" passes for blurs, keep the
+    final pass simple, and remember every texture() tap costs fill rate.
+
+-----------------------------------------------------------------------------
+7. CHECKLIST BEFORE SHARING
+-----------------------------------------------------------------------------
+
+  [ ] vulkiris.pack.json parses (name + at least one pass)
+  [ ] every "fragment" path exists inside the pack
+  [ ] shaders start with #version 330 and use no binding qualifiers
+  [ ] tested on the Vulkan backend (Video Settings → experimental Vulkan)
+  [ ] settings have sensible min/max/default; presets reference real ids
+  [ ] zip it (folder layout preserved) or share the folder — both load
+
+Happy shading! — the Vulkiris project

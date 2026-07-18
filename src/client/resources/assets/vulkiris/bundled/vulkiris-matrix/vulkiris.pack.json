@@ -1,0 +1,10 @@
+{
+	"name": "MATRIX (secret)",
+	"author": "Vulkiris",
+	"passes": [ { "fragment": "shaders/matrix.fsh" } ],
+	"settings": [
+		{ "id": "strength", "name": "Strength", "min": 0.0, "max": 1.0, "default": 0.8 },
+		{ "id": "drip", "name": "Code Drip", "min": 0.0, "max": 1.0, "default": 0.5 }
+	],
+	"presets": { "Operator": { "strength": 0.6, "drip": 0.3 }, "The One": { "strength": 1.0, "drip": 0.8 } }
+}

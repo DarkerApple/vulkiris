@@ -26,6 +26,10 @@ vec3 tonemapFilmic(vec3 x) {
     return mix(min(x, vec3(1.0)), curved, 0.4);
 }
 
+float hash2(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 void main() {
     vec3 color = texture(SceneColorSampler, texCoord).rgb;
     float underwater = Screen.w;
@@ -102,7 +106,22 @@ void main() {
     if (eggStrength > 0.001) {
         float eggMode = Extra2.w;
         float eggLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
-        if (eggMode > 2.5) {
+        if (eggMode > 3.5) {
+            // BACKROOMS: VCR tape + flashlight; see composite.fsh for the full notes.
+            vec3 tape = mix(vec3(eggLuma), color, 0.35) * vec3(1.08, 1.0, 0.62);
+            tape = clamp((tape - 0.5) * 0.9 + 0.53, 0.0, 1.0);
+            float scan = 0.88 + 0.12 * sin(gl_FragCoord.y * 3.14159 + time * 40.0);
+            tape *= mix(1.0, scan, 0.7) * (0.96 + 0.04 * sin(time * 19.0));
+            float snow = hash2(gl_FragCoord.xy + vec2(fract(time) * 511.0, fract(time * 0.77) * 733.0)) - 0.5;
+            tape += snow * (0.06 + 0.10 * (1.0 - eggLuma));
+            float band = floor(texCoord.y * 90.0);
+            float dropout = step(0.985, hash2(vec2(band, floor(time * 9.0))));
+            tape = mix(tape, vec3(0.9), dropout * 0.5);
+            vec2 ec = (texCoord - 0.5) * vec2(Screen.x / max(Screen.y, 1.0), 1.0);
+            float beam = smoothstep(0.52, 0.10, length(ec));
+            tape *= mix(0.18, 1.0, beam);
+            color = mix(color, tape, eggStrength);
+        } else if (eggMode > 2.5) {
             vec3 eerie = mix(vec3(eggLuma), color, 0.25) * vec3(0.88, 0.98, 0.94) * 0.82;
             float pulse = 0.97 + 0.03 * sin(time * 0.7);
             color = mix(color, eerie * pulse, eggStrength);

@@ -2,6 +2,9 @@ package dev.vulkiris.gui;
 
 import dev.vulkiris.config.VulkirisConfig;
 import dev.vulkiris.config.VulkirisPresets;
+import dev.vulkiris.pack.PackRepository;
+import dev.vulkiris.pack.PackSettingsStore;
+import dev.vulkiris.pack.ShaderPack;
 import dev.vulkiris.pipeline.PipelineManager;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -87,13 +90,49 @@ public final class VulkirisSettingsScreen extends Screen {
 		done.setX(SIDEBAR_X);
 		done.setY(this.height - 26);
 
-		// --- Content. ---
-		switch (this.tab) {
-			case TAB_PRESETS -> this.buildPresets(config);
-			case TAB_LOOK -> this.buildLook(config);
-			case TAB_EFFECTS -> this.buildEffects(config);
-			case TAB_STYLE -> this.buildStyle(config);
-			default -> this.buildViewmodel(config);
+		// --- Content. When a shader pack is active, the shader tabs show ITS settings,
+		// because the built-in Look/Effects/Style values only drive the default shader. ---
+		String activePack = activePackId();
+		if (activePack != null && (this.tab == TAB_LOOK || this.tab == TAB_EFFECTS || this.tab == TAB_STYLE)) {
+			this.buildPackSettings(config, activePack);
+		} else {
+			switch (this.tab) {
+				case TAB_PRESETS -> this.buildPresets(config);
+				case TAB_LOOK -> this.buildLook(config);
+				case TAB_EFFECTS -> this.buildEffects(config);
+				case TAB_STYLE -> this.buildStyle(config);
+				default -> this.buildViewmodel(config);
+			}
+		}
+	}
+
+	private static @Nullable String activePackId() {
+		String pipeline = VulkirisConfig.get().pipeline;
+		return pipeline != null && pipeline.startsWith("pack:") ? pipeline.substring("pack:".length()) : null;
+	}
+
+	/** The active shader pack's own controls: master toggle, its presets, its sliders. */
+	private void buildPackSettings(VulkirisConfig config, String packId) {
+		this.addToggle(() -> onOff("vulkiris.option.effects", config.enabled), () -> {
+			config.enabled = !config.enabled;
+			PipelineManager.active().clearFailure();
+		}, false);
+		try (ShaderPack pack = PackRepository.open(packId)) {
+			this.status = Component.translatable("vulkiris.msg.pack_settings_hint", pack.name());
+			this.rowBreak();
+			for (var preset : pack.presets().entrySet()) {
+				this.place(this.addRenderableWidget(Button.builder(Component.literal(preset.getKey()), b -> {
+					PackSettingsStore.applyPreset(packId, preset.getValue());
+					this.rebuild();
+				}).build()));
+			}
+			this.rowBreak();
+			for (ShaderPack.Setting setting : pack.settings()) {
+				float current = PackSettingsStore.value(packId, setting);
+				this.place(this.addRenderableWidget(new PackSettingSlider(packId, setting, current)));
+			}
+		} catch (Exception e) {
+			this.status = Component.translatable("vulkiris.msg.import_failed");
 		}
 	}
 
@@ -140,13 +179,29 @@ public final class VulkirisSettingsScreen extends Screen {
 
 	private void addPresetButton(VulkirisConfig config, String id) {
 		boolean active = id.equals(config.preset);
+		boolean deletable = !VulkirisPresets.builtInIds().contains(id);
 		Component name = VulkirisPresets.displayName(id);
-		this.place(this.addRenderableWidget(Button.builder(active ? Component.literal("\u27a4 ").append(name) : name, b -> {
+		Button main = this.addRenderableWidget(Button.builder(active ? Component.literal("\u27a4 ").append(name) : name, b -> {
 			VulkirisPresets.apply(id);
 			PipelineManager.active().clearFailure();
 			this.status = Component.translatable("vulkiris.msg.preset", VulkirisPresets.displayName(id));
 			this.rebuild();
-		}).build()));
+		}).build());
+		this.place(main);
+		if (deletable) {
+			// Shrink the main button and tuck a delete button beside it.
+			main.setWidth(WIDGET_WIDTH - 22);
+			Button delete = this.addRenderableWidget(Button.builder(Component.literal("\u2715"), b -> {
+				boolean removed = VulkirisPresets.deleteUserPreset(id);
+				this.status = removed
+						? Component.translatable("vulkiris.msg.preset_deleted", id)
+						: Component.translatable("vulkiris.msg.import_failed");
+				this.rebuild();
+			}).build());
+			delete.setWidth(20);
+			delete.setX(main.getX() + WIDGET_WIDTH - 20);
+			delete.setY(main.getY());
+		}
 	}
 
 	/** Starts the next widget on a fresh row (a visual group separator). */
@@ -307,6 +362,33 @@ public final class VulkirisSettingsScreen extends Screen {
 		} else {
 			widget.setX(contentLeft + (contentSpace - WIDGET_WIDTH) / 2);
 			widget.setY(TOP_Y + index * ROW_HEIGHT);
+		}
+	}
+
+	private static final class PackSettingSlider extends AbstractSliderButton {
+		private final String packId;
+		private final ShaderPack.Setting setting;
+
+		PackSettingSlider(String packId, ShaderPack.Setting setting, float current) {
+			super(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.empty(),
+					(current - setting.min()) / (setting.max() - setting.min()));
+			this.packId = packId;
+			this.setting = setting;
+			this.updateMessage();
+		}
+
+		@Override
+		protected void updateMessage() {
+			this.setMessage(Component.literal(String.format("%s: %.2f", this.setting.name(), this.current())));
+		}
+
+		@Override
+		protected void applyValue() {
+			PackSettingsStore.set(this.packId, this.setting.id(), this.current());
+		}
+
+		private float current() {
+			return this.setting.min() + (float) this.value * (this.setting.max() - this.setting.min());
 		}
 	}
 

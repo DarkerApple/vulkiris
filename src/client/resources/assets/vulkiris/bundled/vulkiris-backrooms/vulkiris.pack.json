@@ -1,0 +1,11 @@
+{
+	"name": "BACKROOMS (secret)",
+	"author": "Vulkiris",
+	"passes": [ { "fragment": "shaders/backrooms.fsh" } ],
+	"settings": [
+		{ "id": "tape", "name": "Tape Wear", "min": 0.0, "max": 1.0, "default": 0.7 },
+		{ "id": "flashlight", "name": "Flashlight", "min": 0.0, "max": 1.0, "default": 0.85 },
+		{ "id": "noise", "name": "Static", "min": 0.0, "max": 1.0, "default": 0.6 }
+	],
+	"presets": { "Level 0": { "tape": 0.6, "flashlight": 0.8, "noise": 0.5 }, "No Signal": { "tape": 1.0, "flashlight": 1.0, "noise": 1.0 } }
+}
