@@ -64,6 +64,21 @@ screen. Settings persist to `config/vulkiris.json`.
 
 English and **한국어 (Korean)** — follows the game language automatically.
 
+## Easter eggs 🥚
+
+Certain words typed in chat transform the whole screen (the message is swallowed, so
+nobody sees you do it — type the word again to go back).
+
+<details>
+<summary>Spoilers</summary>
+
+- `SANNABI` (or `산나비`) — neon-noir city: deep navy shadows, electric cyan
+  highlights, warm signage accents
+- `MATRIX` — everything is code
+- `HEROBRINE` — you probably shouldn't have typed that
+
+</details>
+
 ## How it works (and why it runs on Vulkan)
 
 Minecraft 26.2 added an experimental Vulkan backend behind **Video Settings → Graphics

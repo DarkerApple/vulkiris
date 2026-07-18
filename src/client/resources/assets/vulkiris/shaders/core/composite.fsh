@@ -261,6 +261,39 @@ void main() {
     float warmth = Extra.x;
     color *= vec3(1.0 + warmth, 1.0 + warmth * 0.2, 1.0 - warmth * 1.2);
 
+    // --- Easter-egg looks (chat-triggered, cross-faded). ---
+    float eggStrength = SunScreen.w;
+    if (eggStrength > 0.001) {
+        float eggMode = Extra2.w;
+        float eggLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        if (eggMode > 2.5) {
+            // HEROBRINE: drained, cold, and a little too dark to be comfortable.
+            vec3 eerie = mix(vec3(eggLuma), color, 0.25) * vec3(0.88, 0.98, 0.94) * 0.82;
+            float pulse = 0.97 + 0.03 * sin(time * 0.7);
+            color = mix(color, eerie * pulse, eggStrength);
+            vec2 ec = texCoord - 0.5;
+            color *= 1.0 - eggStrength * 0.45 * smoothstep(0.08, 0.55, dot(ec, ec));
+        } else if (eggMode > 1.5) {
+            // MATRIX: everything is code.
+            vec3 rampDark = vec3(0.0, 0.07, 0.01);
+            vec3 rampBright = vec3(0.5, 1.0, 0.45);
+            vec3 matrixColor = mix(rampDark, rampBright, pow(eggLuma, 0.85));
+            color = mix(color, matrixColor, eggStrength * 0.8);
+        } else if (eggMode > 0.5) {
+            // SANNABI: neon-noir night city — deep navy shadows, electric cyan
+            // highlights, and warm signage accents surviving the duotone.
+            vec3 duoShadow = vec3(0.05, 0.09, 0.26);
+            vec3 duoHighlight = vec3(0.62, 0.88, 1.05);
+            vec3 duotone = mix(duoShadow, duoHighlight, pow(eggLuma, 1.1));
+            float warmAccent = clamp((color.r - max(color.g, color.b)) * 3.0, 0.0, 1.0) * eggLuma;
+            vec3 sannabi = mix(duotone, color * vec3(1.25, 0.75, 0.55), warmAccent);
+            sannabi = clamp((sannabi - 0.5) * 1.12 + 0.5, 0.0, 1.0);
+            color = mix(color, sannabi, eggStrength * 0.85);
+            vec2 ec = texCoord - 0.5;
+            color *= 1.0 - eggStrength * 0.25 * smoothstep(0.2, 0.62, dot(ec, ec));
+        }
+    }
+
     // --- Vignette. ---
     vec2 fromCenter = texCoord - 0.5;
     float vignette = 1.0 - GradeA.w * smoothstep(0.25, 0.68, dot(fromCenter, fromCenter));

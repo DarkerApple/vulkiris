@@ -4,11 +4,9 @@
 	"key.vulkiris.settings": "Open Vulkiris Settings",
 	"key.vulkiris.cycle_preset": "Next Preset",
 	"key.vulkiris.reload_config": "Reload Config",
-
 	"vulkiris.screen.title": "Vulkiris Settings",
 	"vulkiris.on": "ON",
 	"vulkiris.off": "OFF",
-
 	"vulkiris.option.effects": "Effects",
 	"vulkiris.option.tonemap": "Tonemap",
 	"vulkiris.option.brightness": "Brightness",
@@ -31,15 +29,12 @@
 	"vulkiris.option.water": "Water Shading",
 	"vulkiris.option.ssr": "Water Reflections",
 	"vulkiris.option.sun_specular": "Sun Specular",
-
 	"vulkiris.tonemap.aces": "ACES",
 	"vulkiris.tonemap.filmic": "Filmic",
 	"vulkiris.tonemap.off": "Off",
-
 	"vulkiris.ssr.off": "Off",
 	"vulkiris.ssr.low": "Low",
 	"vulkiris.ssr.high": "High",
-
 	"vulkiris.preset.label": "Preset: %s",
 	"vulkiris.preset.potato": "Potato Mode",
 	"vulkiris.preset.light": "Light Mode",
@@ -50,17 +45,19 @@
 	"vulkiris.preset.extreme": "Extreme Mode",
 	"vulkiris.preset.reallife": "Real-Life Mode",
 	"vulkiris.preset.custom": "Custom",
-
 	"vulkiris.button.export": "Export to Clipboard",
 	"vulkiris.button.import": "Import from Clipboard",
 	"vulkiris.button.page_look": "Page: Look",
 	"vulkiris.button.page_effects": "Page: Effects",
-
 	"vulkiris.msg.enabled": "Vulkiris: enabled",
 	"vulkiris.msg.disabled": "Vulkiris: disabled",
 	"vulkiris.msg.reloaded": "Vulkiris: config reloaded",
 	"vulkiris.msg.preset": "Vulkiris preset: %s",
 	"vulkiris.msg.exported": "Settings copied to clipboard — paste to share!",
 	"vulkiris.msg.imported": "Preset imported: %s",
-	"vulkiris.msg.import_failed": "Import failed — copy a Vulkiris settings JSON first"
+	"vulkiris.msg.import_failed": "Import failed — copy a Vulkiris settings JSON first",
+	"vulkiris.msg.egg.1": "§9SANNABI§r — the city remembers.",
+	"vulkiris.msg.egg.2": "§aThere is no spoon.",
+	"vulkiris.msg.egg.3": "§7He is watching...",
+	"vulkiris.msg.egg.off": "Back to reality."
 }

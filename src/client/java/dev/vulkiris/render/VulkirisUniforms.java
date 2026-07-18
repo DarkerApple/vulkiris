@@ -38,8 +38,8 @@ import java.nio.ByteOrder;
  * vec4 BloomParams     (offset 304)  bloom intensity, bloom threshold, sun scatter, depth-is-zero-to-one flag
  * vec4 Toggles         (offset 320)  tonemap mode, fog enabled, bloom enabled, tonemap strength
  * vec4 Extra           (offset 336)  warmth, ao strength, water enabled, god rays strength
- * vec4 Extra2          (offset 352)  sun specular, light bleed, ssr steps, unused
- * vec4 SunScreen       (offset 368)  xy sun position in UV space, z on-screen flag, w unused
+ * vec4 Extra2          (offset 352)  sun specular, light bleed, ssr steps, easter-egg mode
+ * vec4 SunScreen       (offset 368)  xy sun position in UV space, z on-screen flag, w easter-egg strength
  * </pre>
  */
 public final class VulkirisUniforms {
@@ -134,9 +134,10 @@ public final class VulkirisUniforms {
 		putVec4(config.exposure, config.saturation, config.contrast, config.vignette);
 		putVec4(config.bloomIntensity, config.bloomThreshold, config.sunScatter, depthZeroToOne ? 1.0f : 0.0f);
 		putVec4(config.tonemapMode(), config.fog ? 1.0f : 0.0f, config.bloom ? 1.0f : 0.0f, config.tonemapStrength);
+		VulkirisEggs.tick();
 		putVec4(config.warmth, aoStrength, waterOn ? 1.0f : 0.0f, config.godRays);
-		putVec4(config.sunSpecular, lightBleed, config.ssrSteps, 0.0f);
-		putVec4(sunU, sunV, sunOnScreen, 0.0f);
+		putVec4(config.sunSpecular, lightBleed, config.ssrSteps, VulkirisEggs.mode());
+		putVec4(sunU, sunV, sunOnScreen, VulkirisEggs.strength());
 		data.rewind();
 	}
 

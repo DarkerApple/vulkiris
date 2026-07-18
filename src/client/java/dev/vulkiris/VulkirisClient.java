@@ -6,11 +6,13 @@ import com.mojang.logging.LogUtils;
 import dev.vulkiris.config.VulkirisConfig;
 import dev.vulkiris.config.VulkirisPresets;
 import dev.vulkiris.gui.VulkirisSettingsScreen;
+import dev.vulkiris.render.VulkirisEggs;
 import dev.vulkiris.render.VulkirisRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -41,6 +43,9 @@ public final class VulkirisClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(VulkirisClient::onEndTick);
 		LevelRenderEvents.BEFORE_TRANSLUCENT_TERRAIN.register(context -> VulkirisRenderer.captureWaterDepth(context.gameRenderer()));
+		// Secret chat words swap the whole look; the message is swallowed instead of sent.
+		ClientSendMessageEvents.ALLOW_CHAT.register(message ->
+				!VulkirisEggs.handleChatMessage(Minecraft.getInstance(), message));
 
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 			DeviceInfo info = RenderSystem.getDevice().getDeviceInfo();

@@ -4,11 +4,9 @@
 	"key.vulkiris.settings": "Vulkiris 설정 열기",
 	"key.vulkiris.cycle_preset": "다음 프리셋",
 	"key.vulkiris.reload_config": "설정 다시 불러오기",
-
 	"vulkiris.screen.title": "Vulkiris 설정",
 	"vulkiris.on": "켬",
 	"vulkiris.off": "끔",
-
 	"vulkiris.option.effects": "효과",
 	"vulkiris.option.tonemap": "톤맵",
 	"vulkiris.option.brightness": "밝기",
@@ -31,15 +29,12 @@
 	"vulkiris.option.water": "물 셰이딩",
 	"vulkiris.option.ssr": "물 반사 (SSR)",
 	"vulkiris.option.sun_specular": "태양 반사광",
-
 	"vulkiris.tonemap.aces": "ACES",
 	"vulkiris.tonemap.filmic": "필름",
 	"vulkiris.tonemap.off": "끔",
-
 	"vulkiris.ssr.off": "끔",
 	"vulkiris.ssr.low": "낮음",
 	"vulkiris.ssr.high": "높음",
-
 	"vulkiris.preset.label": "프리셋: %s",
 	"vulkiris.preset.potato": "감자 모드",
 	"vulkiris.preset.light": "라이트 모드",
@@ -50,17 +45,19 @@
 	"vulkiris.preset.extreme": "익스트림 모드",
 	"vulkiris.preset.reallife": "실사 모드",
 	"vulkiris.preset.custom": "사용자 지정",
-
 	"vulkiris.button.export": "클립보드로 내보내기",
 	"vulkiris.button.import": "클립보드에서 가져오기",
 	"vulkiris.button.page_look": "페이지: 화면 보정",
 	"vulkiris.button.page_effects": "페이지: 효과",
-
 	"vulkiris.msg.enabled": "Vulkiris: 켜짐",
 	"vulkiris.msg.disabled": "Vulkiris: 꺼짐",
 	"vulkiris.msg.reloaded": "Vulkiris: 설정을 다시 불러왔습니다",
 	"vulkiris.msg.preset": "Vulkiris 프리셋: %s",
 	"vulkiris.msg.exported": "설정이 클립보드에 복사되었습니다 — 붙여넣기로 공유하세요!",
 	"vulkiris.msg.imported": "프리셋을 가져왔습니다: %s",
-	"vulkiris.msg.import_failed": "가져오기 실패 — 먼저 Vulkiris 설정 JSON을 복사하세요"
+	"vulkiris.msg.import_failed": "가져오기 실패 — 먼저 Vulkiris 설정 JSON을 복사하세요",
+	"vulkiris.msg.egg.1": "§9산나비§r — 도시가 기억하고 있다.",
+	"vulkiris.msg.egg.2": "§a숟가락은 없다.",
+	"vulkiris.msg.egg.3": "§7그가 지켜보고 있다...",
+	"vulkiris.msg.egg.off": "현실로 돌아왔습니다."
 }
