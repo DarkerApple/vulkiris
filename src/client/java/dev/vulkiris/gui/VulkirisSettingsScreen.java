@@ -59,19 +59,35 @@ public final class VulkirisSettingsScreen extends Screen {
 		next.setY(this.rowY(0));
 		this.nextIndex = 2;
 
-		// Share row.
-		this.addButton(Component.translatable("vulkiris.button.export"), () -> {
+		// Packs + share row (three buttons across the two-column span).
+		int rowSpan = 2 * WIDGET_WIDTH + GAP_X;
+		int thirdWidth = (rowSpan - 8) / 3;
+		int rowLeft = centerX - rowSpan / 2;
+		int shareY = this.rowY(1);
+		Button packsButton = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.packs"),
+				b -> this.minecraft.setScreenAndShow(new VulkirisPacksScreen(this))).build());
+		packsButton.setWidth(thirdWidth);
+		packsButton.setX(rowLeft);
+		packsButton.setY(shareY);
+		Button exportButton = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.export"), b -> {
 			VulkirisPresets.exportToClipboard(this.minecraft);
 			this.status = Component.translatable("vulkiris.msg.exported");
-		});
-		this.addButton(Component.translatable("vulkiris.button.import"), () -> {
+		}).build());
+		exportButton.setWidth(thirdWidth);
+		exportButton.setX(rowLeft + thirdWidth + 4);
+		exportButton.setY(shareY);
+		Button importButton = this.addRenderableWidget(Button.builder(Component.translatable("vulkiris.button.import"), b -> {
 			String id = VulkirisPresets.importFromClipboard(this.minecraft);
 			this.status = id != null
 					? Component.translatable("vulkiris.msg.imported", VulkirisPresets.displayName(id))
 					: Component.translatable("vulkiris.msg.import_failed");
 			PipelineManager.active().clearFailure();
 			this.rebuild();
-		});
+		}).build());
+		importButton.setWidth(thirdWidth);
+		importButton.setX(rowLeft + 2 * (thirdWidth + 4));
+		importButton.setY(shareY);
+		this.nextIndex = 4;
 
 		if (this.page == 0) {
 			this.addToggle(() -> onOff("vulkiris.option.effects", config.enabled), () -> {

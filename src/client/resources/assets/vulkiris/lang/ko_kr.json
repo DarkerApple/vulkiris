@@ -69,5 +69,11 @@
 	"vulkiris.option.selective_bloom": "선택적 블룸",
 	"vulkiris.option.rim_light": "림 라이트",
 	"vulkiris.option.toon": "툰 셰이딩",
-	"vulkiris.button.page_style": "페이지: 스타일"
+	"vulkiris.button.page_style": "페이지: 스타일",
+	"vulkiris.button.packs": "셰이더 팩…",
+	"vulkiris.screen.packs_title": "Vulkiris 셰이더 팩",
+	"vulkiris.pipeline.default": "Vulkiris 기본 셰이더 (내장)",
+	"vulkiris.button.open_folder": "팩 폴더 열기",
+	"vulkiris.button.refresh": "새로고침",
+	"vulkiris.msg.pack_applied": "셰이더 팩 적용됨: %s"
 }

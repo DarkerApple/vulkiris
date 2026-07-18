@@ -6,6 +6,8 @@ import com.mojang.logging.LogUtils;
 import dev.vulkiris.config.VulkirisConfig;
 import dev.vulkiris.config.VulkirisPresets;
 import dev.vulkiris.gui.VulkirisSettingsScreen;
+import dev.vulkiris.pack.PackRepository;
+import dev.vulkiris.pipeline.PackPipeline;
 import dev.vulkiris.pipeline.PipelineManager;
 import dev.vulkiris.render.VulkirisEggs;
 import net.fabricmc.api.ClientModInitializer;
@@ -50,6 +52,11 @@ public final class VulkirisClient implements ClientModInitializer {
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 			DeviceInfo info = RenderSystem.getDevice().getDeviceInfo();
 			LOGGER.info("Vulkiris running on the {} backend ({}, {})", info.backendName(), info.vendorName(), info.name());
+			PackRepository.ensureDir();
+			String pipeline = VulkirisConfig.get().pipeline;
+			if (pipeline != null && pipeline.startsWith("pack:")) {
+				PipelineManager.setActive(new PackPipeline(pipeline.substring("pack:".length())));
+			}
 		});
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> PipelineManager.active().shutdown());
 

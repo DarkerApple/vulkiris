@@ -1,0 +1,7 @@
+{
+	"name": "CRT Demo",
+	"author": "Vulkiris",
+	"passes": [
+		{ "fragment": "shaders/crt.fsh" }
+	]
+}

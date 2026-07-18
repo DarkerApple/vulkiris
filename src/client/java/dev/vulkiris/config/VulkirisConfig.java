@@ -18,6 +18,8 @@ public final class VulkirisConfig {
 	public boolean enabled = true;
 	/** Id of the last applied preset ("custom" once anything is hand-tuned). */
 	public String preset = "medium";
+	/** Active pipeline: "default" for the built-in shader, or "pack:&lt;id&gt;" for a shader pack. */
+	public String pipeline = "default";
 
 	/** One of: "aces", "filmic", "off". */
 	public String tonemap = "aces";
@@ -179,6 +181,9 @@ public final class VulkirisConfig {
 	public VulkirisConfig sanitized() {
 		if (preset == null || preset.isBlank()) {
 			preset = "custom";
+		}
+		if (pipeline == null || pipeline.isBlank()) {
+			pipeline = "default";
 		}
 		if (tonemap == null || tonemap.isBlank()) {
 			tonemap = "aces";

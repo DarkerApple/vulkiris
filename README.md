@@ -18,16 +18,29 @@ are `vulkiris:default` — the first implementation. Shader-pack-backed pipeline
 plug into the same seam, so packs can be switched at runtime without touching the
 hooks.
 
-### Roadmap to pack loading
+### Shader packs — here now (format v1)
 
-1. **Now** — default pipeline (this repo): presets, quality tiers, full settings UI.
-2. **Pack discovery** — scan `shaderpacks/`, parse pack metadata and properties.
-3. **Post-chain packs** — run pack `composite`/`final`-style passes through the
-   platform's pass runner (the same machinery the default pipeline uses).
-4. **Full programs** — translate pack terrain/entity programs to vanilla-compilable
+Vulkiris loads shader packs from the game's **`shaderpacks/`** folder (folders or
+zips). In game: **O → Shader Packs…** — an Iris-style list with *Open Pack Folder*
+and *Refresh* buttons; selection applies instantly and persists. Pack GLSL is
+compiled by Minecraft's own backend compiler, so **one pack runs on both OpenGL and
+Vulkan** unchanged.
+
+Making a pack is a `vulkiris.pack.json` plus fragment shaders — up to eight ordered
+fullscreen passes with scene color, depth, the previous pass, and the shared
+`VulkirisParams` uniform block (time, sun, camera, matrices, fog) available. See
+**[docs/PACK_FORMAT.md](docs/PACK_FORMAT.md)** for the full guide and
+[docs/example-packs/crt](docs/example-packs/crt) for a copy-paste CRT demo.
+
+### Roadmap
+
+1. ~~Default pipeline~~ · ~~pack discovery~~ · ~~post-chain packs (format v1)~~ — done.
+2. **Format v2** — multi-input passes, custom targets/formats, water-depth input,
+   pack-defined settings exposed in the Vulkiris UI.
+3. **Full programs** — translate pack terrain/entity programs to vanilla-compilable
    GLSL and map them onto the Vulkan backend's pipeline system. This is the hard,
    long-tail step: the vanilla Vulkan compiler is stricter than GL and the gbuffer
-   model differs, so packs will land incrementally.
+   model differs, so Iris-style packs will land incrementally.
 
 ## Presets
 
